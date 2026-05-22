@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    shm_size: '2gb'
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-whatsapp_db}
+      # Add other environment variables as needed by Coolify
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - backend_sessions:/app/wa_sessions
+      - backend_uploads:/app/uploads
+    restart: always
+    networks:
+      - whatsapp_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:3001}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - whatsapp_net
+
+# If you use Coolify's built-in MySQL service, delete the 'mysql' service below 
+# and update DB_HOST to point to your Coolify MySQL resource.
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=password
+      - MYSQL_DATABASE=whatsapp_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - whatsapp_net
+    restart: always
+
+networks:
+  whatsapp_net:
+    driver: bridge
+
+volumes:
+  backend_sessions:
+  backend_uploads:
+  mysql_data:

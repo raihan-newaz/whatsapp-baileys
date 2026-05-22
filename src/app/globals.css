@@ -1,0 +1,244 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
+
+  /* wacloud custom static colors */
+  --color-wacloud-green: #085E4D;
+  --color-wacloud-green-light: #0a7560;
+}
+
+:root {
+  --background: #f4f4f5; /* zinc-100 */
+  --foreground: #09090b; /* zinc-950 */
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  
+  --primary: #085E4D;
+  --primary-foreground: #ffffff;
+  
+  --secondary: #f4f4f5; /* zinc-100 */
+  --secondary-foreground: #18181b; /* zinc-900 */
+  
+  --muted: #f4f4f5; /* zinc-100 */
+  --muted-foreground: #71717a; /* zinc-500 */
+  
+  --accent: #f4f4f5; /* zinc-100 */
+  --accent-foreground: #18181b; /* zinc-900 */
+  
+  --destructive: #ef4444; /* red-500 */
+  --destructive-foreground: #fafafa;
+  
+  --border: #e4e4e7; /* zinc-200 */
+  --input: #e4e4e7;
+  --ring: #085E4D; /* Use primary color for rings */
+  
+  --radius: 0.75rem; /* Base radius corresponding to rounded-xl roughly */
+  --font-sans: var(--font-poppins), "Poppins", system-ui, sans-serif;
+
+  /* Global Component Variables */
+  --comp-height: 1.75rem;
+  --comp-radius: 0.75rem;
+  --comp-border: 1px;
+  --comp-border-color: var(--border);
+  --comp-px: 0.75rem;
+  --comp-font-size: 0.8125rem;
+
+  /* Force font-weight limits as requested */
+  --font-weight-black: 600;
+  --font-weight-bold: 600;
+}
+
+.dark {
+  --background: #09090b; /* zinc-950 */
+  --foreground: #fafafa; /* zinc-50 */
+  --card: #0f0f12; /* Very dark background for depth */
+  --card-foreground: #fafafa; /* zinc-50 */
+  --popover: #0f0f12; 
+  --popover-foreground: #fafafa;
+  
+  --primary: #10b981; /* emerald-500 - more vibrant green for dark mode */
+  --primary-foreground: #022c22;
+  
+  --secondary: #27272a; /* zinc-800 */
+  --secondary-foreground: #fafafa; /* zinc-50 */
+  
+  --muted: #27272a; /* zinc-800 */
+  --muted-foreground: #a1a1aa; /* zinc-400 */
+  
+  --accent: #27272a; /* zinc-800 */
+  --accent-foreground: #fafafa; /* zinc-50 */
+  
+  --destructive: #7f1d1d; /* red-900 */
+  --destructive-foreground: #fef2f2; /* red-50 */
+  
+  --border: #27272a; /* zinc-800 */
+  --input: #27272a; /* zinc-800 */
+  --ring: #10b981; /* emerald-500 */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground selection:bg-primary/20 selection:text-primary min-h-screen antialiased;
+  }
+  html, body {
+    @apply font-sans;
+    font-family: var(--font-poppins), "Poppins", system-ui, sans-serif !important;
+  }
+  
+  /* Global Border Radius Overrides - Ensure consistency */
+  .rounded-2xl, 
+  .rounded-3xl,
+  .rounded-\[2rem\],
+  .rounded-\[2\.5rem\],
+  .rounded-\[3rem\] {
+    border-radius: var(--radius) !important;
+  }
+
+  button {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+    font-weight: 500 !important;
+  }
+
+  h1 {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+
+  /* Standard Button Components */
+  /* Shared Base Logic (Consolidated) */
+  .btn-primary, .btn-secondary, .btn-icon, .btn-icon-primary {
+    @apply flex items-center justify-center transition-all active:scale-[0.98] font-bold disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Primary Action Buttons (e.g., Create, Add) */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    padding-left: var(--comp-px) !important;
+    padding-right: var(--comp-px) !important;
+    font-size: var(--comp-font-size) !important;
+    border: var(--comp-border) solid transparent;
+  }
+
+  /* Secondary/Utility Buttons (e.g., Refresh, Filters) */
+  .btn-secondary {
+    @apply bg-secondary text-foreground hover:bg-secondary/80 shadow-sm transition-all;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    padding-left: var(--comp-px) !important;
+    padding-right: var(--comp-px) !important;
+    font-size: var(--comp-font-size) !important;
+    border: var(--comp-border) solid var(--comp-border-color) !important;
+  }
+
+  /* Icon-only Buttons (e.g., Square Refresh) */
+  .btn-icon {
+    @apply bg-secondary text-foreground hover:bg-secondary/80 shadow-sm;
+    width: var(--comp-height) !important;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    border: var(--comp-border) solid var(--comp-border-color) !important;
+  }
+  .btn-icon-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm;
+    width: var(--comp-height) !important;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    border: var(--comp-border) solid transparent;
+  }
+
+  /* Consistency Badge (e.g. Capacity) */
+  .badge-standard {
+    @apply flex items-center justify-center bg-secondary text-muted-foreground whitespace-nowrap shadow-sm gap-2.5;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    font-size: calc(var(--comp-font-size) * 0.8) !important;
+    border: var(--comp-border) solid var(--comp-border-color) !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Standard Input Field */
+  .input-standard {
+    @apply w-full bg-background text-foreground transition-all placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none;
+    height: var(--comp-height) !important;
+    border-radius: var(--comp-radius) !important;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: var(--comp-font-size) !important;
+    border: var(--comp-border) solid var(--input) !important;
+  }
+
+  /* Hide number input spin buttons */
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+    appearance: none;
+  }
+}
+.sidebar-scroll::-webkit-scrollbar {
+  display: none;
+}
+.sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
