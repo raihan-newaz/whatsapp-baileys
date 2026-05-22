@@ -14,9 +14,9 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=whatsapp_db
     ports:
-      # Map container port 3000 to localhost port 3000 on the host machine.
-      # This is highly secure: only OpenLiteSpeed/CyberPanel can proxy to it.
-      - "127.0.0.1:3000:3000"
+      # Map container port 3000 to localhost port 3005 on the host machine
+      # to avoid conflict with any other app using port 3000.
+      - "127.0.0.1:3005:3000"
     volumes:
       - ./wa_sessions:/app/wa_sessions
       - ./uploads:/app/uploads
