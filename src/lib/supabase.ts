@@ -1,4 +1,6 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 
 // Local client to run completely locally using the MySQL-backed Express server for authentication
 class MockSupabaseClient {
