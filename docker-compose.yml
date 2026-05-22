@@ -1,64 +1,47 @@
 version: '3.8'
 
 services:
-  backend:
+  app:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
-    shm_size: '2gb'
-    environment:
-      - PORT=3001
-      - NODE_ENV=production
-      - DB_HOST=${DB_HOST:-mysql}
-      - DB_USER=${DB_USER:-root}
-      - DB_PASSWORD=${DB_PASSWORD:-password}
-      - DB_NAME=${DB_NAME:-whatsapp_db}
-      # Add other environment variables as needed by Coolify
-    ports:
-      - "3001:3001"
-    volumes:
-      - ./backend:/app
-      - backend_sessions:/app/wa_sessions
-      - backend_uploads:/app/uploads
     restart: always
-    networks:
-      - whatsapp_net
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
     environment:
+      - PORT=3000
       - NODE_ENV=production
-      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:3001}
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=whatsapp_db
     ports:
-      - "3000:3000"
+      # Map container port 3000 to localhost port 3000 on the host machine.
+      # This is highly secure: only OpenLiteSpeed/CyberPanel can proxy to it.
+      - "127.0.0.1:3000:3000"
     volumes:
-      - ./frontend:/app
+      - ./wa_sessions:/app/wa_sessions
+      - ./uploads:/app/uploads
     depends_on:
-      - backend
-    restart: always
+      - db
     networks:
       - whatsapp_net
 
-# If you use Coolify's built-in MySQL service, delete the 'mysql' service below 
-# and update DB_HOST to point to your Coolify MySQL resource.
-  mysql:
+  db:
     image: mysql:8.0
+    restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=password
       - MYSQL_DATABASE=whatsapp_db
     volumes:
       - mysql_data:/var/lib/mysql
+      # Auto-initialize database tables using our schema file on first boot
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    # Do NOT bind port 3306 to host, since CyberPanel's host MySQL already runs there!
     networks:
       - whatsapp_net
-    restart: always
 
 networks:
   whatsapp_net:
     driver: bridge
 
 volumes:
-  backend_sessions:
-  backend_uploads:
   mysql_data:
