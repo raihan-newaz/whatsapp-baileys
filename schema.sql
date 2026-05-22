@@ -5,6 +5,8 @@ USE whatsapp_db;
 -- 1. Profiles Table
 CREATE TABLE IF NOT EXISTS profiles (
     id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
     full_name VARCHAR(255),
     avatar_url TEXT,
     phone VARCHAR(20),
