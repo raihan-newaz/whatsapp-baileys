@@ -15,6 +15,27 @@ const router = Router();
 router.use(checkApiKey);
 
 /**
+ * GET /api/me
+ * Fetch authenticated user profile, plan, and validity.
+ */
+router.get('/me', async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    try {
+        const [rows]: any = await db.query(
+            'SELECT id, email, full_name, role, plan, plan_expires_at, created_at FROM profiles WHERE id = ?',
+            [userId]
+        );
+        const profile = rows[0];
+        if (!profile) {
+            return res.status(404).json({ success: false, message: 'Profile not found' });
+        }
+        res.json({ success: true, data: profile });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+/**
  * GET /api/devices
  * List all WhatsApp devices (sessions) for the user.
  */
