@@ -75,8 +75,16 @@ router.get('/:userId', async (req: Request, res: Response) => {
       byDay[dayStr] = { date: dayStr.slice(5), sent: 0, failed: 0, delivered: 0, read: 0 };
     }
     
+    const isValidDate = (dateVal: any) => {
+      if (!dateVal) return false;
+      const dateStr = String(dateVal).trim();
+      if (dateStr.startsWith('0000-00-00') || dateStr === '') return false;
+      const d = new Date(dateStr);
+      return !isNaN(d.getTime());
+    };
+
     for (const l of logs) {
-      if (!l.sent_at) continue;
+      if (!isValidDate(l.sent_at)) continue;
       const day = getLocalDateString(new Date(l.sent_at));
       if (byDay[day]) {
         if (isSent(l))             byDay[day].sent++;
@@ -87,7 +95,7 @@ router.get('/:userId', async (req: Request, res: Response) => {
     }
 
     for (const m of inboxMsgs) {
-      if (!m.timestamp) continue;
+      if (!isValidDate(m.timestamp)) continue;
       const day = getLocalDateString(new Date(m.timestamp));
       if (byDay[day]) {
         if (isSent(m))      byDay[day].sent++;
@@ -102,18 +110,18 @@ router.get('/:userId', async (req: Request, res: Response) => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    for (const l of logs.filter(l => isSent(l) && l.sent_at && new Date(l.sent_at) >= sevenDaysAgo)) {
+    for (const l of logs.filter(l => isSent(l) && isValidDate(l.sent_at) && new Date(l.sent_at) >= sevenDaysAgo)) {
       hourly[new Date(l.sent_at).getHours()]++;
     }
-    for (const m of inboxMsgs.filter(m => m.timestamp && new Date(m.timestamp) >= sevenDaysAgo)) {
+    for (const m of inboxMsgs.filter(m => isValidDate(m.timestamp) && new Date(m.timestamp) >= sevenDaysAgo)) {
       hourly[new Date(m.timestamp).getHours()]++;
     }
 
     // Today's quota
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todaySent = logs.filter(l => isSent(l) && l.sent_at && new Date(l.sent_at) >= today).length
-                    + inboxMsgs.filter(m => m.timestamp && new Date(m.timestamp) >= today).length;
+    const todaySent = logs.filter(l => isSent(l) && isValidDate(l.sent_at) && new Date(l.sent_at) >= today).length
+                    + inboxMsgs.filter(m => isValidDate(m.timestamp) && new Date(m.timestamp) >= today).length;
 
     // 4. Campaign Stats
     const [campaignRows] = await db.query(

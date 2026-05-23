@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
 import { apiFetch } from '@/lib/api';
+import { io } from 'socket.io-client';
 import { 
   ScrollText, Download, Trash2, Image as ImageIcon, FileText, 
   MessageSquare, Plus, Search, Filter, ChevronDown, 
@@ -13,22 +14,46 @@ import { useToast } from '@/context/ToastContext';
 import { QuickMessageModal } from '@/components/QuickMessageModal';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 
+const BACKEND_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 const fmt = (date: string | null) => {
   if (!date) return null;
-  const d = new Date(date);
-  return {
-    date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-    time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
-  };
+  const dateStr = String(date).trim();
+  if (dateStr.startsWith('0000-00-00') || dateStr === '') return null;
+  
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+
+  try {
+    return {
+      date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+    };
+  } catch (e) {
+    console.error('Failed to format date:', date, e);
+    return null;
+  }
 };
 
 /** Calculate elapsed time between two timestamps like "3m 12s" */
 function elapsedTime(from: string | null, to: string | null): string | null {
   if (!from || !to) return null;
-  const diffMs = new Date(to).getTime() - new Date(from).getTime();
+  const fromStr = String(from).trim();
+  const toStr = String(to).trim();
+  if (fromStr.startsWith('0000-00-00') || toStr.startsWith('0000-00-00')) return null;
+
+  const fromTime = new Date(fromStr).getTime();
+  const toTime = new Date(toStr).getTime();
+
+  if (isNaN(fromTime) || isNaN(toTime)) return null;
+
+  const diffMs = toTime - fromTime;
   if (diffMs <= 0) return null;
+
   const secs  = Math.floor(diffMs / 1000);
   const mins  = Math.floor(secs / 60);
   const hours = Math.floor(mins / 60);
@@ -39,24 +64,56 @@ function elapsedTime(from: string | null, to: string | null): string | null {
   return `${secs}s`;
 }
 
+/** Get effective ack value, robustly fallback to check timestamps and status for older/legacy data */
+function getEffectiveAck(log: { ack: number; status: string; delivered_at?: string | null; read_at?: string | null }) {
+  let ack = Number(log.ack ?? 0);
+  const read = log.read_at ? String(log.read_at).trim() : '';
+  const deliv = log.delivered_at ? String(log.delivered_at).trim() : '';
+
+  if (read && !read.startsWith('0000-00-00') && read !== '') {
+    ack = Math.max(ack, 3);
+  } else if (deliv && !deliv.startsWith('0000-00-00') && deliv !== '') {
+    ack = Math.max(ack, 2);
+  } else if (log.status === 'read') {
+    ack = Math.max(ack, 3);
+  } else if (log.status === 'delivered') {
+    ack = Math.max(ack, 2);
+  } else if (log.status === 'sent') {
+    ack = Math.max(ack, 1);
+  }
+  return ack;
+}
+
 /** Baileys ack: 0=pending, 1=sent(queued), 2=delivered, 3=read */
-function AckBadge({ ack, status }: { ack: number; status: string }) {
+function AckBadge({ 
+  ack, 
+  status, 
+  deliveredAt, 
+  readAt 
+}: { 
+  ack: number; 
+  status: string; 
+  deliveredAt?: string | null; 
+  readAt?: string | null;
+}) {
+  const effectiveAck = getEffectiveAck({ ack, status, delivered_at: deliveredAt, read_at: readAt });
+
   if (status === 'failed') return (
     <span className="bg-destructive/5 text-destructive px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest border border-destructive/20 flex items-center w-fit gap-1 shadow-sm whitespace-nowrap">
       <AlertCircle className="w-3 h-3" /> Failed
     </span>
   );
-  if (ack >= 3) return (
+  if (effectiveAck >= 3) return (
     <span className="bg-violet-500/5 text-violet-600 dark:text-violet-400 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest border border-violet-500/20 flex items-center w-fit gap-1 shadow-sm whitespace-nowrap">
       <Eye className="w-3 h-3" /> Seen
     </span>
   );
-  if (ack === 2) return (
+  if (effectiveAck === 2) return (
     <span className="bg-blue-500/5 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest border border-blue-500/20 flex items-center w-fit gap-1 shadow-sm whitespace-nowrap">
       <CheckCheck className="w-3 h-3" /> Delivered
     </span>
   );
-  if (ack === 1) return (
+  if (effectiveAck === 1) return (
     <span className="bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-widest border border-emerald-500/20 flex items-center w-fit gap-1 shadow-sm whitespace-nowrap">
       <Check className="w-3 h-3" /> Sent
     </span>
@@ -122,7 +179,7 @@ function MessageDetailsModal({ isOpen, onClose, log }: { isOpen: boolean; onClos
              </div>
              <div>
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em] mb-2.5">Status</p>
-                <AckBadge ack={log.ack ?? 0} status={log.status} />
+                <AckBadge ack={log.ack ?? 0} status={log.status} deliveredAt={log.delivered_at} readAt={log.read_at} />
              </div>
              <div>
                 <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.15em] mb-2.5">Reply Status</p>
@@ -192,6 +249,8 @@ export default function MessageHistoryPage() {
   const [detailsLog, setDetailsLog] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
+  
+  const socketRef = useRef<any>(null);
 
   // Compute dynamic filter options with normalized fallback
   const dynamicSources = ['all', ...Array.from(new Set(logs.map((l: any) => l.source || (l.campaign_name ? 'campaign' : 'direct'))))] as string[];
@@ -206,7 +265,41 @@ export default function MessageHistoryPage() {
   })))] as string[];
   const dynamicSessions = ['all', ...Array.from(new Set(logs.map((l: any) => l.session_name || 'default')))] as string[];
 
-  useEffect(() => { fetchLogs(); }, []);
+  useEffect(() => {
+    fetchLogs();
+
+    let socket: any;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+
+      socket = io(BACKEND_URL);
+      socketRef.current = socket;
+      socket.emit('join', data.user.id);
+
+      socket.on('wa:message_ack', ({ messageWid, ack, status }: { messageWid: string, ack: number, status: string }) => {
+        setLogs(prev => prev.map(log => {
+          if (log.message_id === messageWid && (log.ack === undefined || log.ack < ack)) {
+            const nowIso = new Date().toISOString();
+            return {
+              ...log,
+              ack: ack,
+              status: status,
+              delivered_at: ack >= 2 ? nowIso : log.delivered_at,
+              read_at: ack >= 3 ? nowIso : log.read_at
+            };
+          }
+          return log;
+        }));
+      });
+    });
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+    };
+  }, []);
 
   async function fetchLogs() {
     const supabase = createClient();
@@ -236,18 +329,21 @@ export default function MessageHistoryPage() {
 
   const exportCSV = () => {
     const headers = ['Contact', 'Device', 'Source', 'Type', 'Status', 'Reply', 'Sent At', 'Delivered At', 'Seen At', 'Delivery Time'].join(',');
-    const rows = filtered.map(l => [
-      l.phone,
-      l.session_name || 'Primary',
-      l.source || (l.campaign_name ? 'Campaign' : 'Quick'),
-      l.media_type || 'Text',
-      l.status + (l.ack >= 3 ? ' (seen)' : l.ack === 2 ? ' (delivered)' : ''),
-      l.has_reply ? 'Replied' : 'No Reply',
-      l.sent_at || l.created_at,
-      l.delivered_at || '',
-      l.read_at || '',
-      elapsedTime(l.sent_at || l.created_at, l.delivered_at) || ''
-    ].map(v => `"${v}"`).join(','));
+    const rows = filtered.map(l => {
+      const effAck = getEffectiveAck(l);
+      return [
+        l.phone,
+        l.session_name || 'Primary',
+        l.source || (l.campaign_name ? 'Campaign' : 'Quick'),
+        l.media_type || 'Text',
+        l.status + (effAck >= 3 ? ' (seen)' : effAck === 2 ? ' (delivered)' : ''),
+        l.has_reply ? 'Replied' : 'No Reply',
+        l.sent_at || l.created_at,
+        l.delivered_at || '',
+        l.read_at || '',
+        elapsedTime(l.sent_at || l.created_at, l.delivered_at) || ''
+      ].map(v => `"${v}"`).join(',');
+    });
     const blob = new Blob([[headers, ...rows].join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -261,12 +357,13 @@ export default function MessageHistoryPage() {
     if (l.status === 'extracted' || l.phone === 'Extraction') return false;
 
     // Status filter — Baileys hierarchical: 0=pending, 1=sent, 2=delivered, 3=read
+    const effectiveAck = getEffectiveAck(l);
     const matchesStatus =
       statusFilter === 'all' ||
-      (statusFilter === 'seen'      && l.ack >= 3) ||
-      (statusFilter === 'delivered' && l.ack >= 2) ||
-      (statusFilter === 'sent'      && l.ack >= 1) ||
-      (statusFilter === 'pending'   && (l.ack <= 0 || l.status === 'pending') && l.status !== 'failed') ||
+      (statusFilter === 'seen'      && effectiveAck >= 3) ||
+      (statusFilter === 'delivered' && effectiveAck >= 2) ||
+      (statusFilter === 'sent'      && effectiveAck >= 1) ||
+      (statusFilter === 'pending'   && (effectiveAck <= 0 || l.status === 'pending') && l.status !== 'failed') ||
       (statusFilter === 'failed'    && l.status === 'failed');
 
     // Reply filter
@@ -483,7 +580,7 @@ export default function MessageHistoryPage() {
 
                     {/* Status */}
                     <td className="py-4 px-4">
-                      <AckBadge ack={log.ack ?? 0} status={log.status} />
+                      <AckBadge ack={log.ack ?? 0} status={log.status} deliveredAt={log.delivered_at} readAt={log.read_at} />
                     </td>
 
                     {/* Reply Status */}
@@ -568,7 +665,7 @@ export default function MessageHistoryPage() {
       <MessageDetailsModal
         isOpen={showDetails}
         onClose={() => setShowDetails(false)}
-        log={detailsLog}
+        log={logs.find(l => l.id === detailsLog?.id) || detailsLog}
       />
 
       <QuickMessageModal

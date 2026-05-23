@@ -26,6 +26,21 @@ export default function DeveloperApiPage() {
   const [baseUrl, setBaseUrl] = useState('');
   const [regenerating, setRegenerating] = useState(false);
   const [expandedEndpoint, setExpandedEndpoint] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState('authentication');
+
+  const scrollToSection = (id: string, endpointKey?: string) => {
+    setActiveSection(endpointKey || id);
+    if (endpointKey) {
+      setExpandedEndpoint(endpointKey);
+    }
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
+
   const [activeTabs, setActiveTabs] = useState<Record<string, string>>({
     'send-message': 'cURL',
     'devices': 'cURL',
@@ -53,6 +68,51 @@ export default function DeveloperApiPage() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    const sectionIds = [
+      'authentication',
+      'quick-start',
+      'endpoint-send-message',
+      'endpoint-devices',
+      'endpoint-device-status',
+      'endpoint-message-status',
+      'endpoint-check-whatsapp',
+      'endpoint-send-transactional',
+      'sdks',
+      'errors'
+    ];
+
+    const observerOptions = {
+      root: null,
+      rootMargin: '-15% 0px -75% 0px',
+      threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          const sectionKey = id.startsWith('endpoint-') ? id.replace('endpoint-', '') : id;
+          setActiveSection(sectionKey);
+        }
+      });
+    }, observerOptions);
+
+    const timer = setTimeout(() => {
+      sectionIds.forEach((id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          observer.observe(element);
+        }
+      });
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [expandedEndpoint]);
 
   const fetchProfile = async (uid: string) => {
     try {
@@ -139,35 +199,65 @@ export default function DeveloperApiPage() {
           </div>
           <p className="text-[11px] text-muted-foreground mt-0.5">v1.0</p>
         </div>
-        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium bg-primary/10 text-primary transition-colors hover:bg-primary/20">
+        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 font-sans">
+          <button 
+            onClick={() => scrollToSection('authentication')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'authentication' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Shield className="w-3.5 h-3.5 shrink-0" /> Authentication
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('quick-start')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'quick-start' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Zap className="w-3.5 h-3.5 shrink-0" /> Quick Start
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-send-message', 'send-message')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'send-message' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Send className="w-3.5 h-3.5 shrink-0" /> Send Message
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-devices', 'devices')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'devices' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Smartphone className="w-3.5 h-3.5 shrink-0" /> List Devices
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-device-status', 'device-status')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'device-status' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Activity className="w-3.5 h-3.5 shrink-0" /> Device Status
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-message-status', 'message-status')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'message-status' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Search className="w-3.5 h-3.5 shrink-0" /> Message Status
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-check-whatsapp', 'check-whatsapp')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'check-whatsapp' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <Hash className="w-3.5 h-3.5 shrink-0" /> Check WhatsApp
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('endpoint-send-transactional', 'send-transactional')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'send-transactional' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" /> Transactional
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('sdks', 'sdks')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'sdks' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <CodeXml className="w-3.5 h-3.5 shrink-0" /> SDKs & Tools
           </button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60">
+          <button 
+            onClick={() => scrollToSection('errors', 'errors')}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${activeSection === 'errors' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'}`}
+          >
             <TriangleAlert className="w-3.5 h-3.5 shrink-0" /> Error Codes
           </button>
         </div>
@@ -384,7 +474,7 @@ export default function DeveloperApiPage() {
 
             <div className="grid gap-4">
               {/* POST /send-message */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'send-message' ? 'border-primary/30 bg-white dark:bg-zinc-950 ring-1 ring-primary/5 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-send-message" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'send-message' ? 'border-primary/30 bg-white dark:bg-zinc-950 ring-1 ring-primary/5 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'send-message' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'send-message' ? null : 'send-message')}
@@ -564,7 +654,7 @@ export default function DeveloperApiPage() {
               </div>
 
               {/* GET /devices */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'devices' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-devices" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'devices' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'devices' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'devices' ? null : 'devices')}
@@ -677,7 +767,7 @@ export default function DeveloperApiPage() {
               </div>
 
               {/* GET /device-status/{instance_id} */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'device-status' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-device-status" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'device-status' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'device-status' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'device-status' ? null : 'device-status')}
@@ -811,7 +901,7 @@ export default function DeveloperApiPage() {
               </div>
 
               {/* GET /message-status/{message_id} */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'message-status' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-message-status" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'message-status' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'message-status' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'message-status' ? null : 'message-status')}
@@ -942,7 +1032,7 @@ export default function DeveloperApiPage() {
               </div>
 
               {/* GET /check-whatsapp/{instance_id}/{phone} */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'check-whatsapp' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-check-whatsapp" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'check-whatsapp' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'check-whatsapp' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'check-whatsapp' ? null : 'check-whatsapp')}
@@ -1077,7 +1167,7 @@ export default function DeveloperApiPage() {
               </div>
 
               {/* POST /send-transactional */}
-              <div className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'send-transactional' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
+              <div id="endpoint-send-transactional" className={`rounded-xl border overflow-hidden transition-all ${expandedEndpoint === 'send-transactional' ? 'border-primary/30 bg-white dark:bg-zinc-950 shadow-sm' : 'border-border bg-card/20 hover:border-primary/20'}`}>
                 <div 
                   className={`flex items-center justify-between p-4 cursor-pointer ${expandedEndpoint === 'send-transactional' ? 'border-b border-border/60 bg-muted/5' : ''}`}
                   onClick={() => setExpandedEndpoint(expandedEndpoint === 'send-transactional' ? null : 'send-transactional')}

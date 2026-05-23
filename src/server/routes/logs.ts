@@ -108,12 +108,23 @@ router.get('/:userId/analytics', async (req: Request, res: Response) => {
     // Group by day for chart
     const byDay: Record<string, { sent: number; failed: number; delivered: number; read: number }> = {};
     for (const row of data) {
-      const day = new Date(row.created_at).toISOString().slice(0, 10);
-      if (!byDay[day]) byDay[day] = { sent: 0, failed: 0, delivered: 0, read: 0 };
-      if (isSent(row))             byDay[day].sent++;
-      if (row.status === 'failed') byDay[day].failed++;
-      if (row.ack >= 2)            byDay[day].delivered++;
-      if (row.ack >= 3)            byDay[day].read++;
+      if (!row.created_at) continue;
+      const dateStr = String(row.created_at).trim();
+      if (dateStr.startsWith('0000-00-00') || dateStr === '') continue;
+
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) continue;
+
+      try {
+        const day = d.toISOString().slice(0, 10);
+        if (!byDay[day]) byDay[day] = { sent: 0, failed: 0, delivered: 0, read: 0 };
+        if (isSent(row))             byDay[day].sent++;
+        if (row.status === 'failed') byDay[day].failed++;
+        if (row.ack >= 2)            byDay[day].delivered++;
+        if (row.ack >= 3)            byDay[day].read++;
+      } catch (e) {
+        console.error('Failed to parse log analytics date:', row.created_at, e);
+      }
     }
 
     res.json({

@@ -112,108 +112,27 @@ export default function ForgotPasswordPage() {
             <p className="text-zinc-500 text-sm font-semibold">Enter your email address to generate a secure reset link.</p>
           </div>
 
-          {success ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="bg-emerald-500/10 border border-emerald-500/25 px-5 py-4 rounded-2xl flex items-start gap-4">
-                <CheckCircle className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <h4 className="text-emerald-400 font-bold text-sm">Reset Request Generated</h4>
-                  <p className="text-zinc-400 text-xs leading-relaxed">
-                    A secure password reset link has been registered in the system. If this were a production system, an email containing recovery instructions would be dispatched.
-                  </p>
-                </div>
-              </div>
-
-              {/* Developer local testing link showcase */}
-              {isLocalhost && resetToken && (
-                <div className="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
-                    <Key className="w-4 h-4" />
-                    <span>Local Development Reset Link</span>
-                  </div>
-                  <p className="text-zinc-500 text-[11px] leading-relaxed">
-                    Since you are running locally on <code className="text-zinc-300 bg-zinc-900 px-1 py-0.5 rounded">localhost</code>, we have exposed your reset link directly here for painless testing:
-                  </p>
-                  
-                  <div className="flex items-center gap-2 bg-black border border-zinc-800 rounded-xl p-2.5 pl-3.5 pr-2 justify-between">
-                    <span className="text-zinc-300 text-xs truncate select-all pr-4 max-w-[280px]">
-                      {resetLink}
-                    </span>
-                    <button
-                      onClick={copyToClipboard}
-                      className="p-2 hover:bg-zinc-900 rounded-lg text-zinc-400 hover:text-emerald-400 transition-colors flex-shrink-0"
-                      title="Copy link"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  <Link 
-                    href={`/auth/reset-password?token=${resetToken}`}
-                    className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-extrabold pt-1"
-                  >
-                    Go to Reset Password page <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              )}
-
-              <div className="pt-2">
-                <Link
-                  href="/auth/login"
-                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-4 rounded-2xl transition-all shadow-[0_4px_25px_rgba(16,185,129,0.15)] flex items-center justify-center gap-2 group"
-                >
-                  Return to Sign In
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-red-500/10 border border-red-500/25 px-5 py-4 rounded-2xl flex items-start gap-4">
+              <Key className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className="text-red-400 font-bold text-sm">Recovery Disabled</h4>
+                <p className="text-zinc-400 text-xs leading-relaxed">
+                  Password recovery is currently disabled. Please contact your system administrator to reset or retrieve your account credentials.
+                </p>
               </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Email Address</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-zinc-600">
-                    <Mail className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 focus:border-emerald-500/80 rounded-2xl pl-12 pr-4 py-3.5 text-white text-sm font-medium placeholder:text-zinc-600 focus:outline-none transition-all shadow-inner focus:ring-1 focus:ring-emerald-500/50"
-                    placeholder="name@company.com"
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
 
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/25 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 leading-relaxed animate-shake">
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-4 rounded-2xl transition-all shadow-[0_4px_25px_rgba(16,185,129,0.15)] flex items-center justify-center gap-2 group hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+            <div className="pt-2">
+              <Link
+                href="/auth/login"
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-4 px-4 rounded-2xl transition-all shadow-[0_4px_25px_rgba(16,185,129,0.15)] flex items-center justify-center gap-2 group"
               >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    Request Reset Link
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-                  </>
-                )}
-              </button>
-
-              <p className="text-center text-zinc-500 text-sm font-semibold pt-2">
-                Remembered your credentials?{' '}
-                <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors">Sign In</Link>
-              </p>
-            </form>
-          )}
+                Return to Sign In
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+          </div>
 
         </div>
       </div>

@@ -267,6 +267,20 @@ CREATE TABLE IF NOT EXISTS auto_reply_rules (
     FOREIGN KEY (session_id) REFERENCES whatsapp_sessions(id)
 );
 
+-- 16. SMS Gateways Table
+CREATE TABLE IF NOT EXISTS sms_gateways (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    provider VARCHAR(100) NOT NULL,
+    config JSON NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- Seed default system settings
 INSERT INTO system_settings (`key`, `value`) VALUES
 ('billing_limits', '{"free_trial": {"name": "Free Trial", "accounts": 1, "daily_msgs": 2000, "group_extractions": 10, "max_contacts": 25000, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 100, "media_limit_unit": "MB", "validity_days": 3}, "pro": {"name": "Pro Plan", "accounts": 5, "daily_msgs": 5000, "group_extractions": 50, "max_contacts": 50000, "monthly_price": "$29", "yearly_price": "$249", "media_limit": 500, "media_limit_unit": "MB", "validity_days": 30}, "business": {"name": "Business Plan", "accounts": 12, "daily_msgs": 16666, "group_extractions": 200, "max_contacts": 100000, "monthly_price": "$59", "yearly_price": "$499", "media_limit": 1024, "media_limit_unit": "MB", "validity_days": 30}, "enterprise": {"name": "Enterprise Plan", "accounts": 20, "daily_msgs": 50000, "group_extractions": 500, "max_contacts": 250000, "monthly_price": "$99", "yearly_price": "$899", "media_limit": 5120, "media_limit_unit": "MB", "validity_days": 30}, "admin": {"name": "Administrator", "accounts": 0, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 0, "media_limit_unit": "MB", "validity_days": 0}}')
