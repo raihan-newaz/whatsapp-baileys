@@ -35,7 +35,7 @@ export class NotificationManager {
         try {
             await db.query(
                 'INSERT INTO notifications (id, user_id, title, message, type, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [notification.id, notification.user_id, notification.title, notification.message, notification.type, notification.is_read, notification.created_at]
+                [notification.id, notification.user_id, notification.title, notification.message, notification.type, notification.is_read, new Date()]
             );
 
             // Emit real-time event to the user's specific room
