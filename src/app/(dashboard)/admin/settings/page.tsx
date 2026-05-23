@@ -215,7 +215,8 @@ export default function AdminSettingsPage() {
                       group_extractions: 1, 
                       max_contacts: 500,
                       media_limit: 100,
-                      media_limit_unit: 'MB'
+                      media_limit_unit: 'MB',
+                      validity_days: 30
                     });
                   }
                 }}
@@ -238,6 +239,7 @@ export default function AdminSettingsPage() {
                    <th className="px-6 py-4">Extractions</th>
                   <th className="px-6 py-4">Contacts</th>
                   <th className="px-6 py-4">Storage</th>
+                  <th className="px-6 py-4">Validity (Days)</th>
                   <th className="px-8 py-4 text-right">Action</th>
                 </tr>
               </thead>
@@ -306,6 +308,19 @@ export default function AdminSettingsPage() {
                            <option value="MB">MB</option>
                            <option value="GB">GB</option>
                          </select>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex flex-col gap-1">
+                         <input 
+                           type="number" 
+                           value={billLimits[planId]?.validity_days ?? (planId === 'free_trial' ? 3 : 30)} 
+                           onChange={(e) => updateNestedState('billing_limits', planId, Number(e.target.value), 'validity_days')} 
+                           className="w-16 bg-[#f8f9fa] dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-zinc-900 dark:text-zinc-100 text-xs font-semibold outline-none focus:border-[#085E4D]" 
+                         />
+                         {(billLimits[planId]?.validity_days === 0 || planId === 'admin' || planId === 'enterprise') && (
+                           <span className="text-[9px] text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-500/10 px-1 rounded text-center">Lifetime</span>
+                         )}
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">

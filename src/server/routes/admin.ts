@@ -170,11 +170,23 @@ router.patch('/users/:id', async (req: Request, res: Response) => {
       sets.push('plan = ?');
       values.push(plan);
       
-      const expiresAt = new Date();
-      if (plan === 'free_trial') {
-        expiresAt.setDate(expiresAt.getDate() + 3);
+      let expiresAt: Date | null = new Date();
+      if (plan === 'admin' || plan === 'enterprise') {
+        expiresAt = null; // Admin and Enterprise can never expire
       } else {
-        expiresAt.setDate(expiresAt.getDate() + 30);
+        try {
+          const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
+          const limitsAll = JSON.parse((settingsRows as any[])[0]?.value || '{}');
+          const planLimits = limitsAll[plan] || {};
+          const validityDays = planLimits.validity_days !== undefined ? Number(planLimits.validity_days) : (plan === 'free_trial' ? 3 : 30);
+          if (validityDays === 0) {
+            expiresAt = null;
+          } else {
+            expiresAt.setDate(expiresAt.getDate() + validityDays);
+          }
+        } catch (e) {
+          expiresAt.setDate(expiresAt.getDate() + (plan === 'free_trial' ? 3 : 30));
+        }
       }
       sets.push('plan_expires_at = ?');
       values.push(expiresAt);

@@ -39,13 +39,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [settings, setSettings] = useState<SystemSettings>({});
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { router.push('/auth/login'); return; }
+      if (!data.user) { 
+        router.push('/auth/login'); 
+        return; 
+      }
       setUser(data.user);
       
       try {
@@ -57,6 +61,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setSettings(s.settings || {});
       } catch (err) {
         console.error('Failed to fetch profile/settings in layout:', err);
+      } finally {
+        setLoading(false);
       }
     });
   }, []);
@@ -65,6 +71,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push('/auth/login');
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background gap-3">
+        <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 dark:border-emerald-500/10 dark:border-t-emerald-500 rounded-full animate-spin" />
+        <p className="text-zinc-500 font-semibold text-xs tracking-widest uppercase">Authenticating...</p>
+      </div>
+    );
   }
 
   return (
