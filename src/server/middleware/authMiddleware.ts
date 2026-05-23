@@ -109,11 +109,16 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
     path === '/api/settings';
 
   // Support bypassing cookie verification if an API Key is supplied directly in the headers/query/body
-  let apiKey = 
+  let apiKeyInput: any = 
     req.headers['api-key'] || 
     req.headers['x-api-key'] || 
     req.query.api_key || 
     req.body?.api_key;
+
+  let apiKey: string | undefined;
+  if (apiKeyInput && typeof apiKeyInput === 'string' && apiKeyInput.trim() !== '' && apiKeyInput !== 'undefined' && apiKeyInput !== 'null') {
+    apiKey = apiKeyInput.trim();
+  }
 
   // Support Authorization: Bearer <key> as an API Key fallback
   if (!apiKey && req.headers['authorization']) {
@@ -142,6 +147,7 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
 
       // Attach user information to request
       (req as any).user = { id: profile.id };
+      req.headers['x-user-id'] = profile.id;
       return next();
     } catch (err) {
       console.error('[Middleware] Global API Key verification failed:', err);
@@ -161,6 +167,11 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
     if (authHeader.toLowerCase().startsWith('bearer ')) {
       token = authHeader.substring(7).trim();
     }
+  }
+
+  // Ensure "undefined" or "null" literal strings are not treated as valid tokens
+  if (token === 'undefined' || token === 'null' || !token) {
+    token = undefined;
   }
 
   if (!token) {

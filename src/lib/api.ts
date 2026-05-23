@@ -32,6 +32,14 @@ export async function apiFetch(path: string, options?: RequestInit) {
     });
     
     if (!res.ok) {
+      if (res.status === 401) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('local_auth_user');
+          if (!window.location.pathname.startsWith('/auth/')) {
+            window.location.href = '/auth/login';
+          }
+        }
+      }
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `API Error: ${res.status} ${res.statusText}`);
     }
