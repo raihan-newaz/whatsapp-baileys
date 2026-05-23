@@ -109,14 +109,44 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
     path === '/api/settings';
 
   // Support bypassing cookie verification if an API Key is supplied directly in the headers/query/body
-  const apiKey = 
+  let apiKey = 
     req.headers['api-key'] || 
     req.headers['x-api-key'] || 
     req.query.api_key || 
     req.body?.api_key;
 
+  // Support Authorization: Bearer <key> as an API Key fallback
+  if (!apiKey && req.headers['authorization']) {
+    const auth = req.headers['authorization'] as string;
+    if (auth.toLowerCase().startsWith('bearer ') && auth.slice(7).trim().startsWith('sk_live_')) {
+      apiKey = auth.slice(7).trim();
+    }
+  }
+
   if (apiKey) {
-    return next();
+    try {
+      const [rows] = await db.query('SELECT id, is_banned FROM profiles WHERE api_key = ?', [apiKey]);
+      const profile = (rows as any[])[0];
+
+      if (!profile) {
+        return res.status(401).json({ error: 'Unauthorized', message: 'Invalid API Key.' });
+      }
+
+      if (profile.is_banned) {
+        return res.status(403).json({ 
+          error: 'Forbidden', 
+          message: 'Your account is banned. Please contact support.',
+          banned: true 
+        });
+      }
+
+      // Attach user information to request
+      (req as any).user = { id: profile.id };
+      return next();
+    } catch (err) {
+      console.error('[Middleware] Global API Key verification failed:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
   }
 
   let token: string | undefined;
