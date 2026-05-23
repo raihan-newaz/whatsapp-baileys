@@ -97,6 +97,9 @@ function parseCookies(cookieHeader: string | undefined): Record<string, string> 
 export const authenticateCookie = async (req: Request, res: Response, next: NextFunction) => {
   const path = req.path;
 
+  // We only enforce authentication on API endpoints starting with '/api/'
+  const isApiRequest = path.startsWith('/api/');
+
   // List of public endpoints that don't strictly require a token
   const isPublicPath = 
     path === '/health' ||
@@ -120,10 +123,11 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
   }
 
   if (!token) {
-    if (isPublicPath) {
-      return next();
+    // Only reject if it's a protected API request
+    if (isApiRequest && !isPublicPath) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required. Please login.' });
     }
-    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required. Please login.' });
+    return next();
   }
 
   try {
@@ -143,11 +147,12 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
   } catch (err: any) {
     console.error('[Middleware] JWT verification failed:', err.message);
     
-    if (isPublicPath) {
-      return next();
+    // Only reject if it's a protected API request
+    if (isApiRequest && !isPublicPath) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'Session expired. Please sign in again.' });
     }
 
-    return res.status(401).json({ error: 'Unauthorized', message: 'Session expired. Please sign in again.' });
+    return next();
   }
 };
 
