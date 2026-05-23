@@ -8,7 +8,9 @@ import { Loader2, Smartphone, Wifi, WifiOff, RefreshCw, Power, Trash2, AlertTria
 import { useToast } from '@/context/ToastContext';
 import { format } from 'date-fns';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 
 export default function WhatsAppPage() {
   const [user, setUser] = useState<any>(null);
@@ -316,7 +318,7 @@ export default function WhatsAppPage() {
     if (!editingSession || !user) return;
     setSavingSettings(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/whatsapp/sessions/${editingSession.id}/settings`, {
+      const res = await fetch(`${BACKEND_URL}/api/whatsapp/sessions/${editingSession.id}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, settings: settingsData })

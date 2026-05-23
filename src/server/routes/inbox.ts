@@ -28,8 +28,7 @@ const upload = multer({ storage });
 router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-  const fileUrl = `${backendUrl}/uploads/inbox/${req.file.filename}`;
+  const fileUrl = `/uploads/inbox/${req.file.filename}`;
   
   res.json({ success: true, url: fileUrl, filename: req.file.originalname });
 });

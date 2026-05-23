@@ -17,7 +17,9 @@ export default function WooCommercePage() {
   const [copied, setCopied] = useState('');
   const [profile, setProfile] = useState<any>(null);
   const toast = useToast();
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+  const BACKEND_URL = typeof window !== 'undefined'
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 
   useEffect(() => {
     const supabase = createClient();
@@ -58,10 +60,9 @@ export default function WooCommercePage() {
     }
   }
 
-  function copyUrl(token: string) {
-    const url = `${BACKEND_URL}/api/webhooks/woocommerce/${token}`;
+  function copyUrl(url: string) {
     navigator.clipboard.writeText(url);
-    setCopied(token);
+    setCopied(url);
     setTimeout(() => setCopied(''), 2000);
   }
 

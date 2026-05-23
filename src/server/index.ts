@@ -47,6 +47,10 @@ const nextHandler = nextApp.getRequestHandler();
 
 export let io: SocketIOServer;
 
+export function getIO(): SocketIOServer {
+  return io;
+}
+
 nextApp.prepare().then(() => {
   const app = express();
   const server = http.createServer(app);

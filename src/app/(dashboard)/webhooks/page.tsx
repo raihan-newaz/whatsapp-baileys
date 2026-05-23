@@ -11,7 +11,9 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = typeof window !== 'undefined'
+  ? window.location.origin
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 
 const HTTP_METHODS = [
   { value: 'POST', label: 'POST' },

@@ -27,7 +27,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const initSocket = async () => {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+        const backendUrl = typeof window !== 'undefined'
+          ? ''
+          : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
         s = io(backendUrl);
 
         s.on('connect', () => {

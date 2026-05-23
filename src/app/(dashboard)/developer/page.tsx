@@ -39,7 +39,9 @@ export default function DeveloperApiPage() {
 
   useEffect(() => {
     // Backend URL — where the API actually lives
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+    const backendUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
     setBaseUrl(backendUrl);
 
     const supabase = createClient();

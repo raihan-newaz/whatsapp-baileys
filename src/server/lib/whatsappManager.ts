@@ -9,8 +9,21 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import { Boom } from '@hapi/boom';
-import { io } from '../index';
+import { getIO } from '../index';
 import db, { generateUUID } from './db';
+
+const io = {
+  to: (room: string) => ({
+    emit: (event: string, ...args: any[]) => {
+      const socketServer = getIO();
+      if (socketServer) {
+        socketServer.to(room).emit(event, ...args);
+      } else {
+        console.warn(`[Socket] Skipped emitting "${event}" to "${room}" - Socket.io not initialized yet`);
+      }
+    }
+  })
+};
 import fs from 'fs';
 import path from 'path';
 import webpush from 'web-push';
@@ -125,8 +138,7 @@ async function saveLocalFile(buffer: Buffer, fileName: string, mimetype: string,
     
     fs.writeFileSync(filePath, buffer);
 
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-    return `${backendUrl}/uploads/${folder}/${safeFileName}`;
+    return `/uploads/${folder}/${safeFileName}`;
   } catch (err) {
     console.error('[WhatsApp] Failed to save local file:', err);
     return null;
@@ -271,7 +283,13 @@ export async function createWhatsAppSession(
   console.log(`[WhatsApp] Initializing Baileys connection for ${key}...`);
 
   const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-  const { version } = await fetchLatestBaileysVersion();
+  let version: [number, number, number] = [6, 33, 0];
+  try {
+    const latest = await fetchLatestBaileysVersion();
+    version = latest.version;
+  } catch (e) {
+    console.warn(`[WhatsApp] Failed to fetch latest Baileys version, using default [${version.join('.')}]:`, e);
+  }
 
   const sock = makeWASocket({
     version,

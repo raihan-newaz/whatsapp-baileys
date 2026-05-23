@@ -1,5 +1,18 @@
-import { io } from '../index';
+import { getIO } from '../index';
 import db, { generateUUID } from './db';
+
+const io = {
+  to: (room: string) => ({
+    emit: (event: string, ...args: any[]) => {
+      const socketServer = getIO();
+      if (socketServer) {
+        socketServer.to(room).emit(event, ...args);
+      } else {
+        console.warn(`[Socket] Skipped emitting "${event}" to "${room}" - Socket.io not initialized yet`);
+      }
+    }
+  })
+};
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 

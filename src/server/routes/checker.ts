@@ -1,7 +1,20 @@
 import { Router, Request, Response } from 'express';
 import db, { generateUUID } from '../lib/db';
 import { isNumberRegistered, checkNumberWithProfile } from '../lib/whatsappManager';
-import { io } from '../index';
+import { getIO } from '../index';
+
+const io = {
+  to: (room: string) => ({
+    emit: (event: string, ...args: any[]) => {
+      const socketServer = getIO();
+      if (socketServer) {
+        socketServer.to(room).emit(event, ...args);
+      } else {
+        console.warn(`[Socket] Skipped emitting "${event}" to "${room}" - Socket.io not initialized yet`);
+      }
+    }
+  })
+};
 
 const router = Router();
 

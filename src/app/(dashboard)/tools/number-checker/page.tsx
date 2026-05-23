@@ -23,7 +23,9 @@ import { useToast } from '@/context/ToastContext';
 import { io } from 'socket.io-client';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3000');
 
 export default function NumberCheckerPage() {
   const [user, setUser] = useState<any>(null);
