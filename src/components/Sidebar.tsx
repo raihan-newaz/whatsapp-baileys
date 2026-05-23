@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 const SIDEBAR_MENU = [
-  { type: 'link', href: '/', icon: Grid, label: 'Dashboard' },
+  { type: 'link', href: '/dashboard', icon: Grid, label: 'Dashboard' },
   { 
     type: 'group', 
     label: 'Setup', 

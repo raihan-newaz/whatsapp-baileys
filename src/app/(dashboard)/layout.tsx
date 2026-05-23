@@ -11,7 +11,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 
 const NAV_ITEMS = [
-  { href: '/', icon: LayoutDashboard, label: 'Overview' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { href: '/whatsapp', icon: Smartphone, label: 'WhatsApp' },
   { href: '/send', icon: MessageCircle, label: 'Send Message' },
   { href: '/inbox', icon: MessageSquare, label: 'Inbox' },

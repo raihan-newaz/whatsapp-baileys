@@ -28,7 +28,7 @@ import { startQueueWorker } from './lib/queueWorker';
 import { restoreSessions } from './lib/whatsappManager';
 import apiRouter from './routes/api';
 
-import { checkBanStatus } from './middleware/authMiddleware';
+import { checkBanStatus, authenticateCookie } from './middleware/authMiddleware';
 
 dotenv.config();
 
@@ -96,6 +96,7 @@ nextApp.prepare().then(() => {
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
   app.use(checkBanStatus);
+  app.use(authenticateCookie);
   app.use('/uploads', express.static('uploads'));
 
   // Health check

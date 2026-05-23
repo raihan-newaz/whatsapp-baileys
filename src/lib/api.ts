@@ -27,6 +27,7 @@ export async function apiFetch(path: string, options?: RequestInit) {
 
     const res = await fetch(`${BACKEND_URL}${path}`, {
       ...options,
+      credentials: 'include',
       headers
     });
     

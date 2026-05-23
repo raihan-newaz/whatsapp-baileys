@@ -1,6 +1,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import db from '../lib/db';
+import { verifyJWT } from '../lib/jwt';
 
 export const checkBanStatus = async (req: Request, res: Response, next: NextFunction) => {
   // We expect the frontend to pass userId in the headers or body, 
@@ -77,3 +78,76 @@ export const checkApiKey = async (req: Request, res: Response, next: NextFunctio
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+function parseCookies(cookieHeader: string | undefined): Record<string, string> {
+  const list: Record<string, string> = {};
+  if (!cookieHeader) return list;
+
+  cookieHeader.split(';').forEach((cookie) => {
+    const parts = cookie.split('=');
+    const name = parts[0].trim();
+    if (name) {
+      list[name] = decodeURIComponent((parts[1] || '').trim());
+    }
+  });
+
+  return list;
+}
+
+export const authenticateCookie = async (req: Request, res: Response, next: NextFunction) => {
+  const path = req.path;
+
+  // List of public endpoints that don't strictly require a token
+  const isPublicPath = 
+    path === '/health' ||
+    path === '/api/health' ||
+    path.startsWith('/api/auth/') ||
+    path.startsWith('/uploads/') ||
+    path === '/api/settings';
+
+  let token: string | undefined;
+
+  // Try extracting from cookies first
+  const cookies = parseCookies(req.headers.cookie);
+  token = cookies['accessToken'];
+
+  // Fallback to Bearer token if cookies don't have it
+  if (!token && req.headers['authorization']) {
+    const authHeader = req.headers['authorization'] as string;
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+      token = authHeader.substring(7).trim();
+    }
+  }
+
+  if (!token) {
+    if (isPublicPath) {
+      return next();
+    }
+    return res.status(401).json({ error: 'Unauthorized', message: 'Authentication required. Please login.' });
+  }
+
+  try {
+    const decoded = verifyJWT(token);
+
+    // Propagate x-user-id header for backward compatibility with existing route handlers
+    req.headers['x-user-id'] = decoded.userId;
+
+    // Set user object on the request
+    (req as any).user = {
+      id: decoded.userId,
+      email: decoded.email,
+      role: decoded.role
+    };
+
+    next();
+  } catch (err: any) {
+    console.error('[Middleware] JWT verification failed:', err.message);
+    
+    if (isPublicPath) {
+      return next();
+    }
+
+    return res.status(401).json({ error: 'Unauthorized', message: 'Session expired. Please sign in again.' });
+  }
+};
+

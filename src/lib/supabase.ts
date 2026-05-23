@@ -23,6 +23,7 @@ class MockSupabaseClient {
         const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ email, password })
         });
         
@@ -40,12 +41,42 @@ class MockSupabaseClient {
         return { data: { user: null }, error: err };
       }
     },
+
+    async signInWithGoogle() {
+      try {
+        const email = prompt("Enter your Google Account email:", "user@gmail.com");
+        if (!email) return { data: { user: null }, error: new Error("Google Authentication cancelled") };
+        
+        const name = prompt("Enter your Google Account full name:", "Google User");
+        
+        const res = await fetch(`${BACKEND_URL}/api/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, name: name || 'Google User' })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Google Login failed');
+        }
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('local_auth_user', JSON.stringify(data.user));
+        }
+        return { data: { user: data.user }, error: null };
+      } catch (err: any) {
+        console.error('[MockSupabaseClient] Google Auth failed:', err);
+        return { data: { user: null }, error: err };
+      }
+    },
     
     async signUp({ email, password, options }: any) {
       try {
         const res = await fetch(`${BACKEND_URL}/api/auth/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             email,
             password,
@@ -69,6 +100,11 @@ class MockSupabaseClient {
     },
     
     async signOut() {
+      try {
+        await fetch(`${BACKEND_URL}/api/auth/logout`, { method: 'POST' });
+      } catch (err) {
+        console.error('[MockSupabaseClient] Sign out request failed:', err);
+      }
       if (typeof window !== 'undefined') {
         localStorage.removeItem('local_auth_user');
       }
