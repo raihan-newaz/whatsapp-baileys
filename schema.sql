@@ -231,9 +231,45 @@ CREATE TABLE IF NOT EXISTS verification_jobs (
     FOREIGN KEY (user_id) REFERENCES profiles(id)
 );
 
+-- 15. Auto Reply Rules Table
+CREATE TABLE IF NOT EXISTS auto_reply_rules (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    session_id VARCHAR(36) NULL,
+    name VARCHAR(255) NOT NULL,
+    trigger_type VARCHAR(50) DEFAULT 'contains',
+    trigger_value TEXT NOT NULL,
+    keywords TEXT NULL,
+    match_type VARCHAR(50) DEFAULT 'contains',
+    reply_type VARCHAR(50) DEFAULT 'text',
+    reply_text TEXT NULL,
+    template_id VARCHAR(36) NULL,
+    media_url TEXT NULL,
+    media_type VARCHAR(100) NULL,
+    priority INT DEFAULT 0,
+    case_sensitive BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    use_openai BOOLEAN DEFAULT FALSE,
+    openai_api_key VARCHAR(255) NULL,
+    openai_model VARCHAR(100) DEFAULT 'gpt-3.5-turbo',
+    openai_base_url VARCHAR(255) NULL,
+    openai_system_prompt TEXT NULL,
+    openai_temperature FLOAT DEFAULT 0.7,
+    openai_max_tokens INT NULL,
+    openai_continuous_chat BOOLEAN DEFAULT FALSE,
+    use_gemini BOOLEAN DEFAULT FALSE,
+    gemini_api_key VARCHAR(255) NULL,
+    gemini_model VARCHAR(100) DEFAULT 'gemini-1.5-flash',
+    gemini_system_prompt TEXT NULL,
+    reply_delay INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id),
+    FOREIGN KEY (session_id) REFERENCES whatsapp_sessions(id)
+);
+
 -- Seed default system settings
 INSERT INTO system_settings (`key`, `value`) VALUES
-('billing_limits', '{"free_trial": {"name": "Free Trial", "accounts": 1, "daily_msgs": 2000, "group_extractions": 10, "max_contacts": 25000, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 100, "media_limit_unit": "MB"}, "pro": {"name": "Pro Plan", "accounts": 5, "daily_msgs": 5000, "group_extractions": 50, "max_contacts": 50000, "monthly_price": "$29", "yearly_price": "$249", "media_limit": 500, "media_limit_unit": "MB"}, "business": {"name": "Business Plan", "accounts": 12, "daily_msgs": 16666, "group_extractions": 200, "max_contacts": 100000, "monthly_price": "$59", "yearly_price": "$499", "media_limit": 1024, "media_limit_unit": "MB"}, "enterprise": {"name": "Enterprise Plan", "accounts": 20, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$99", "yearly_price": "$899", "media_limit": 5120, "media_limit_unit": "MB"}, "admin": {"name": "Administrator", "accounts": 0, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 10240, "media_limit_unit": "MB"}}')
+('billing_limits', '{"free_trial": {"name": "Free Trial", "accounts": 1, "daily_msgs": 2000, "group_extractions": 10, "max_contacts": 25000, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 100, "media_limit_unit": "MB"}, "pro": {"name": "Pro Plan", "accounts": 5, "daily_msgs": 5000, "group_extractions": 50, "max_contacts": 50000, "monthly_price": "$29", "yearly_price": "$249", "media_limit": 500, "media_limit_unit": "MB"}, "business": {"name": "Business Plan", "accounts": 12, "daily_msgs": 16666, "group_extractions": 200, "max_contacts": 100000, "monthly_price": "$59", "yearly_price": "$499", "media_limit": 1024, "media_limit_unit": "MB"}, "enterprise": {"name": "Enterprise Plan", "accounts": 0, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$99", "yearly_price": "$899", "media_limit": 0, "media_limit_unit": "MB"}, "admin": {"name": "Administrator", "accounts": 0, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 0, "media_limit_unit": "MB"}}')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 
 INSERT INTO system_settings (`key`, `value`) VALUES
@@ -251,6 +287,7 @@ ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 INSERT INTO system_settings (`key`, `value`) VALUES
 ('campaign_defaults', '{"min_interval": 20, "min_delay": 20, "max_delay": 60}')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
 
 
 
