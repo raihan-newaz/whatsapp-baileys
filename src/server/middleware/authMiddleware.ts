@@ -108,6 +108,17 @@ export const authenticateCookie = async (req: Request, res: Response, next: Next
     path.startsWith('/uploads/') ||
     path === '/api/settings';
 
+  // Support bypassing cookie verification if an API Key is supplied directly in the headers/query/body
+  const apiKey = 
+    req.headers['api-key'] || 
+    req.headers['x-api-key'] || 
+    req.query.api_key || 
+    req.body?.api_key;
+
+  if (apiKey) {
+    return next();
+  }
+
   let token: string | undefined;
 
   // Try extracting from cookies first
