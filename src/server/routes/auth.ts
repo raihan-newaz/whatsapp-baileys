@@ -176,4 +176,104 @@ router.post('/logout', (req: Request, res: Response) => {
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
+// Create password_resets table on load if not exists
+db.query(`
+  CREATE TABLE IF NOT EXISTS password_resets (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`).then(() => {
+  console.log('[Database] password_resets table ensured successfully');
+}).catch(err => {
+  console.error('[Database] Failed to ensure password_resets table:', err);
+});
+
+// POST /api/auth/forgot-password — request a reset token
+router.post('/forgot-password', async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const [rows] = await db.query('SELECT id FROM profiles WHERE email = ?', [email]);
+    const profile = (rows as any[])[0];
+
+    if (!profile) {
+      return res.status(404).json({ error: 'No user is registered with this email address.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const id = generateUUID();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+
+    // Delete any old resets for this email
+    await db.query('DELETE FROM password_resets WHERE email = ?', [email]);
+
+    // Insert new reset token
+    await db.query(
+      'INSERT INTO password_resets (id, email, token, expires_at) VALUES (?, ?, ?, ?)',
+      [id, email, token, expiresAt]
+    );
+
+    // Print reset link to terminal for easy copy-paste local development
+    const port = process.env.PORT || 3000;
+    console.log(`\n======================================================`);
+    console.log(`[PASS RESET] Click below link to reset password:`);
+    console.log(`http://localhost:${port}/auth/reset-password?token=${token}`);
+    console.log(`======================================================\n`);
+
+    res.json({
+      success: true,
+      message: 'Password reset link generated successfully. If running locally, check your backend server console logs to grab the link.',
+      token // Return token so frontend can optionally link to it or show it in dev mode
+    });
+  } catch (err: any) {
+    console.error('[Auth Route] Forgot password request failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/reset-password — verify reset token and update password
+router.post('/reset-password', async (req: Request, res: Response) => {
+  const { token, password } = req.body;
+  if (!token || !password) {
+    return res.status(400).json({ error: 'Token and new password are required' });
+  }
+
+  try {
+    const [rows] = await db.query('SELECT email, expires_at FROM password_resets WHERE token = ?', [token]);
+    const reset = (rows as any[])[0];
+
+    if (!reset) {
+      return res.status(400).json({ error: 'Invalid or expired password reset token.' });
+    }
+
+    const expiresAt = new Date(reset.expires_at);
+    if (Date.now() > expiresAt.getTime()) {
+      await db.query('DELETE FROM password_resets WHERE token = ?', [token]);
+      return res.status(400).json({ error: 'Password reset token has expired.' });
+    }
+
+    const password_hash = bcrypt.hashSync(password, 10);
+
+    // Update password
+    await db.query('UPDATE profiles SET password_hash = ? WHERE email = ?', [password_hash, reset.email]);
+
+    // Clean up used token
+    await db.query('DELETE FROM password_resets WHERE token = ?', [token]);
+
+    res.json({
+      success: true,
+      message: 'Password has been reset successfully. You can now log in with your new password.'
+    });
+  } catch (err: any) {
+    console.error('[Auth Route] Reset password failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
