@@ -54,7 +54,7 @@ router.get('/:userId/stats', async (req: Request, res: Response) => {
 
     const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
     const limitsAll = JSON.parse((settingsRows as any[])[0]?.value || '{}');
-    const planLimits = limitsAll[userPlan] || limitsAll['free'] || {};
+    const planLimits = limitsAll[userPlan] || limitsAll['free_trial'] || {};
     
     // Calculate limit based on value and unit
     const limitValue = planLimits.media_limit ?? 100;

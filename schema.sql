@@ -215,3 +215,42 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES profiles(id)
 );
 
+-- 14. Verification Jobs Table
+CREATE TABLE IF NOT EXISTS verification_jobs (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    session_id VARCHAR(36) NULL,
+    name VARCHAR(255) NOT NULL,
+    phones TEXT NOT NULL,
+    total_count INT DEFAULT 0,
+    completed_count INT DEFAULT 0,
+    valid_count INT DEFAULT 0,
+    invalid_count INT DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id)
+);
+
+-- Seed default system settings
+INSERT INTO system_settings (`key`, `value`) VALUES
+('billing_limits', '{"free_trial": {"name": "Free Trial", "accounts": 1, "daily_msgs": 2000, "group_extractions": 10, "max_contacts": 25000, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 100, "media_limit_unit": "MB"}, "pro": {"name": "Pro Plan", "accounts": 5, "daily_msgs": 5000, "group_extractions": 50, "max_contacts": 50000, "monthly_price": "$29", "yearly_price": "$249", "media_limit": 500, "media_limit_unit": "MB"}, "business": {"name": "Business Plan", "accounts": 12, "daily_msgs": 16666, "group_extractions": 200, "max_contacts": 100000, "monthly_price": "$59", "yearly_price": "$499", "media_limit": 1024, "media_limit_unit": "MB"}, "enterprise": {"name": "Enterprise Plan", "accounts": 20, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$99", "yearly_price": "$899", "media_limit": 5120, "media_limit_unit": "MB"}, "admin": {"name": "Administrator", "accounts": 0, "daily_msgs": 0, "group_extractions": 0, "max_contacts": 0, "monthly_price": "$0", "yearly_price": "$0", "media_limit": 10240, "media_limit_unit": "MB"}}')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+INSERT INTO system_settings (`key`, `value`) VALUES
+('emergency_controls', '{"global_pause": false, "disable_sending": false}')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+INSERT INTO system_settings (`key`, `value`) VALUES
+('anti_spam', '{"max_identical_msgs": 200, "bad_words": []}')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+INSERT INTO system_settings (`key`, `value`) VALUES
+('warmup_rules', '{"day1": 20, "day2": 50, "day3": 100, "day4": 200}')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+INSERT INTO system_settings (`key`, `value`) VALUES
+('campaign_defaults', '{"min_interval": 20, "min_delay": 20, "max_delay": 60}')
+ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
+
+
+

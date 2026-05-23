@@ -52,7 +52,7 @@ router.get('/', async (req: Request, res: Response) => {
     // 3. Fetch Plan Limits
     const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
     const limitsAll = JSON.parse((settingsRows as any[])[0]?.value || '{}');
-    const planLimits = limitsAll[profile.plan] || limitsAll['free'] || {};
+    const planLimits = limitsAll[profile.plan] || limitsAll['free_trial'] || {};
 
     res.json({
       whatsappStatus: (waRows as any[]).some(r => r.status === 'connected') ? 'connected' : 'disconnected',
