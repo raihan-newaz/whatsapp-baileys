@@ -171,8 +171,8 @@ router.patch('/users/:id', async (req: Request, res: Response) => {
       values.push(plan);
       
       let expiresAt: Date | null = new Date();
-      if (plan === 'admin' || plan === 'enterprise') {
-        expiresAt = null; // Admin and Enterprise can never expire
+      if (plan === 'admin') {
+        expiresAt = null; // Admin can never expire
       } else {
         try {
           const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');

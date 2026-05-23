@@ -59,6 +59,39 @@ nextApp.prepare().then(() => {
     cors: { origin: '*', methods: ['GET', 'POST'] },
   });
 
+  app.disable('x-powered-by');
+
+  // 1. HTTP Security Headers
+  app.use((req, res, nextMiddleware) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    nextMiddleware();
+  });
+
+  // 2. Authentication Route Rate Limiting (Brute-Force Prevention)
+  const authIpCache = new Map<string, { count: number; resetTime: number }>();
+  app.use('/api/auth/', (req, res, nextMiddleware) => {
+    const ip = req.ip || (req.headers['x-forwarded-for'] as string) || 'unknown';
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000; // 15 mins window
+    const maxRequests = 100; // max 100 login/signup attempts per IP
+
+    const record = authIpCache.get(ip);
+    if (!record || now > record.resetTime) {
+      authIpCache.set(ip, { count: 1, resetTime: now + windowMs });
+      return nextMiddleware();
+    }
+
+    record.count++;
+    if (record.count > maxRequests) {
+      return res.status(429).json({ error: 'Too many authentication attempts. Please try again after 15 minutes.' });
+    }
+
+    nextMiddleware();
+  });
+
   app.use(cors());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
