@@ -107,9 +107,25 @@ export default function DashboardPage() {
           second: '2-digit', 
           hour12: true 
         }));
+        // If stats says disconnected, double-check directly with sessions API
+        if (statsData.whatsappStatus !== 'connected') {
+          try {
+            const sessions = await apiFetch(`/api/whatsapp/sessions/${uid}`);
+            if (Array.isArray(sessions) && sessions.some((s: any) => s.status === 'connected')) {
+              setStats((prev: Stats) => ({ ...prev, whatsappStatus: 'connected' }));
+            }
+          } catch (e) { /* ignore secondary check errors */ }
+        }
       }
     } catch (err: any) {
       console.error('Failed to fetch dashboard data:', err);
+      // Stats API failed — try to at least get WhatsApp connection status
+      try {
+        const sessions = await apiFetch(`/api/whatsapp/sessions/${uid}`);
+        if (Array.isArray(sessions) && sessions.some((s: any) => s.status === 'connected')) {
+          setStats((prev: Stats) => ({ ...prev, whatsappStatus: 'connected' }));
+        }
+      } catch (e) { /* ignore */ }
     } finally {
       setRefreshing(false);
     }

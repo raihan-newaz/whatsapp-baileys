@@ -64,7 +64,11 @@ router.get('/', async (req: Request, res: Response) => {
     const [failedTodayRows] = await db.query('SELECT COUNT(*) as count FROM message_logs WHERE user_id = ? AND status = ? AND sent_at >= ?', [userId, 'failed', today]);
     const [queueRows] = await db.query('SELECT COUNT(*) as count FROM message_queue WHERE user_id = ? AND status = ?', [userId, 'pending']);
     const [subUsersRows] = await db.query('SELECT COUNT(*) as count FROM profiles WHERE parent_user_id = ?', [userId]);
-    const [mediaRows] = await db.query('SELECT SUM(size) as totalSize FROM media WHERE user_id = ?', [userId]);
+    let mediaTotalSize = 0;
+    try {
+      const [mediaRows] = await db.query('SELECT SUM(size) as totalSize FROM media WHERE user_id = ?', [userId]);
+      mediaTotalSize = Number((mediaRows as any[])[0].totalSize || 0);
+    } catch (e) { /* media table might not exist yet */ }
 
     // 3. Fetch Plan Limits
     const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
@@ -86,7 +90,7 @@ router.get('/', async (req: Request, res: Response) => {
         numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: planLimits.number_checks_limit ?? 3000 },
         apiRequests: { current: profile.api_requests_count || 0, limit: planLimits.api_requests_limit ?? 30000 },
         additionalUsers: { current: (subUsersRows as any[])[0].count || 0, limit: planLimits.additional_users_limit ?? 0 },
-        mediaStorage: { current: Number((mediaRows as any[])[0].totalSize || 0), limit: planLimits.media_limit ?? 104857600 } 
+        mediaStorage: { current: mediaTotalSize, limit: planLimits.media_limit ?? 104857600 } 
       }
     });
   } catch (err: any) {
