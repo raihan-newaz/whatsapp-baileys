@@ -113,9 +113,11 @@ export default function WhatsAppPage() {
     try {
       const data = await apiFetch(`/api/whatsapp/sessions/${uid}`);
       if (data) {
-        setSessions(data);
+        // Filter out Android devices and SMS Gateways so they don't appear on the WhatsApp Accounts page
+        const waSessions = data.filter((s: any) => !s.device_type || s.device_type === 'whatsapp');
+        setSessions(waSessions);
         const initialStatuses: Record<string, string> = {};
-        data.forEach((s: any) => {
+        waSessions.forEach((s: any) => {
           initialStatuses[s.session_name] = s.status;
         });
         setLiveStatuses(prev => ({ ...initialStatuses, ...prev }));
