@@ -86,7 +86,23 @@ function UsageLimitRow({ icon: Icon, label, current, limit, unit = '', showBadge
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({ whatsappStatus: 'disconnected', totalContacts: 0, totalCampaigns: 0, sentToday: 0, failedToday: 0, queuePending: 0 });
+  const [stats, setStats] = useState<Stats>({ 
+    whatsappStatus: 'disconnected', 
+    totalContacts: 0, 
+    totalCampaigns: 0, 
+    sentToday: 0, 
+    failedToday: 0, 
+    queuePending: 0,
+    usage: {
+      deviceConnections: { current: 0, limit: 1 },
+      messagesMonthly: { current: 0, limit: 60000 },
+      contacts: { current: 0, limit: 25000 },
+      numberCheckerCredits: { current: 0, limit: 3000 },
+      apiRequests: { current: 0, limit: 30000 },
+      additionalUsers: { current: 0, limit: 0 },
+      mediaStorage: { current: 0, limit: 104857600 }
+    }
+  });
   const [userId, setUserId] = useState('');
   const [mounted, setMounted] = useState(false);
   const [userPlan, setUserPlan] = useState<string>('');
