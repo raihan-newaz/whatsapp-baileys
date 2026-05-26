@@ -22,11 +22,13 @@ import mediaRouter from './routes/media';
 import checkerRouter from './routes/checker';
 import autoReplyRouter from './routes/autoReply';
 import smsRouter from './routes/sms';
+import androidRouter from './routes/android';
 import notificationsRouter from './routes/notifications';
 import authRouter from './routes/auth';
 import { startQueueWorker } from './lib/queueWorker';
 import { restoreSessions } from './lib/whatsappManager';
 import apiRouter from './routes/api';
+import db from './lib/db';
 
 import { checkBanStatus, authenticateCookie } from './middleware/authMiddleware';
 
@@ -121,6 +123,7 @@ nextApp.prepare().then(() => {
   app.use('/api/checker', checkerRouter);
   app.use('/api/auto-reply', autoReplyRouter);
   app.use('/api/sms', smsRouter);
+  app.use('/api/android', androidRouter);
   app.use('/api/notifications', notificationsRouter);
   app.use('/api', apiRouter);
 
@@ -138,7 +141,84 @@ nextApp.prepare().then(() => {
       console.log(`Client ${socket.id} joined room: ${userId}`);
     });
 
-    socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
+    // Android SMS Gateway joining
+    socket.on('android_join', async (data: { token: string }) => {
+      try {
+        const [rows]: any = await db.query('SELECT * FROM android_devices WHERE connection_token = ?', [data.token]);
+        const device = rows[0];
+        if (device) {
+          await db.query('UPDATE android_devices SET socket_id = ?, status = "connected", last_active_at = NOW() WHERE id = ?', [socket.id, device.id]);
+          socket.join(`android_${device.id}`);
+          socket.join(`android_user_${device.user_id}`);
+          socket.emit('android_registered', { success: true, deviceId: device.id, defaultSim: device.default_sim, delaySeconds: device.sms_delay_seconds });
+          console.log(`Android device ${device.id} connected via socket ${socket.id}`);
+        } else {
+          socket.emit('android_error', { error: 'Invalid token' });
+        }
+      } catch (err) {
+        console.error('Android join error:', err);
+      }
+    });
+
+    socket.on('android_status_update', async (data: { token: string, battery: number }) => {
+       try {
+          await db.query('UPDATE android_devices SET battery_level = ?, last_active_at = NOW() WHERE connection_token = ?', [data.battery, data.token]);
+       } catch (err) {}
+    });
+
+    socket.on('android_incoming_sms', async (data: { token: string, sender: string, message: string }, ack?: Function) => {
+       try {
+          const [rows]: any = await db.query('SELECT id, user_id FROM android_devices WHERE connection_token = ?', [data.token]);
+          const device = rows[0];
+          if (device) {
+             const id = require('./lib/db').generateUUID();
+             await db.query(`
+                INSERT INTO android_incoming_sms (id, user_id, device_id, sender_number, message_content)
+                VALUES (?, ?, ?, ?, ?)
+             `, [id, device.user_id, device.id, data.sender, data.message]);
+             
+             // Emit to the user's web dashboard so it updates in real time
+             io.to(device.user_id).emit('new_incoming_sms', {
+                 id, sender: data.sender, message: data.message, device_id: device.id
+             });
+
+             // Send ACK to Android so it can safely delete from local queue
+             if (typeof ack === 'function') ack({ ok: true });
+          } else {
+             if (typeof ack === 'function') ack({ ok: false });
+          }
+       } catch (err) {
+          console.error('Incoming SMS sync error:', err);
+          if (typeof ack === 'function') ack({ ok: false });
+       }
+    });
+
+    socket.on('android_delivery_report', async (data: { token: string, messageId: string, status: string }, ack?: Function) => {
+       try {
+          const [rows]: any = await db.query('SELECT user_id FROM android_devices WHERE connection_token = ?', [data.token]);
+          if (rows.length > 0) {
+             // For transactional logs
+             await db.query('UPDATE transactional_logs SET status = ? WHERE sms_message_id = ? OR wa_message_id = ?', [data.status, data.messageId, data.messageId]);
+             // For message logs (bulk)
+             await db.query('UPDATE message_logs SET status = ? WHERE message_id = ?', [data.status, data.messageId]);
+
+             // Send ACK to Android so it can safely delete from local queue
+             if (typeof ack === 'function') ack({ ok: true });
+          } else {
+             if (typeof ack === 'function') ack({ ok: false });
+          }
+       } catch (err) {
+          console.error('Delivery report sync error:', err);
+          if (typeof ack === 'function') ack({ ok: false });
+       }
+    });
+
+    socket.on('disconnect', async () => {
+      console.log('Client disconnected:', socket.id);
+      try {
+        await db.query('UPDATE android_devices SET status = "disconnected", socket_id = NULL WHERE socket_id = ?', [socket.id]);
+      } catch(err) {}
+    });
   });
 
   const PORT = process.env.PORT || 3000;

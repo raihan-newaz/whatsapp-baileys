@@ -169,7 +169,7 @@ export default function AutoReplyPage() {
     media_url: '',
     use_openai: false,
     openai_api_key: '',
-    openai_model: 'gpt-3.5-turbo',
+    openai_model: 'gpt-4o-mini',
     openai_base_url: '',
     openai_system_prompt: '',
     openai_temperature: 0.7,
@@ -232,7 +232,7 @@ export default function AutoReplyPage() {
         media_url: '',
         use_openai: false,
         openai_api_key: '',
-        openai_model: 'gpt-3.5-turbo',
+        openai_model: 'gpt-4o-mini',
         openai_base_url: '',
         openai_system_prompt: '',
         openai_temperature: 0.7,
@@ -267,7 +267,7 @@ export default function AutoReplyPage() {
       media_url: rule.media_url || '',
       use_openai: !!rule.use_openai,
       openai_api_key: rule.openai_api_key || '',
-      openai_model: rule.openai_model || 'gpt-3.5-turbo',
+      openai_model: rule.openai_model || 'gpt-4o-mini',
       openai_base_url: rule.openai_base_url || '',
       openai_system_prompt: rule.openai_system_prompt || '',
       openai_temperature: rule.openai_temperature || 0.7,
@@ -275,7 +275,7 @@ export default function AutoReplyPage() {
       openai_continuous_chat: !!rule.openai_continuous_chat,
       use_gemini: !!rule.use_gemini,
       gemini_api_key: rule.gemini_api_key || '',
-      gemini_model: rule.gemini_model || 'gemini-1.5-flash',
+      gemini_model: rule.gemini_model || 'gemini-2.5-flash-lite',
       gemini_system_prompt: rule.gemini_system_prompt || '',
       reply_delay: rule.reply_delay || 0,
       priority: rule.priority || 0,
@@ -291,7 +291,7 @@ export default function AutoReplyPage() {
       ai_provider: session.ai_provider || 'google',
       ai_api_key: session.ai_api_key || '',
       ai_prompt: session.ai_prompt || '',
-      ai_model: session.ai_model || 'gemini-1.5-flash',
+      ai_model: session.ai_model || 'gemini-2.5-flash-lite',
       ai_reply_delay: session.ai_reply_delay || 0
     });
     setShowGlobalAiModal(true);
@@ -733,9 +733,9 @@ export default function AutoReplyPage() {
                           value={formData.openai_model}
                           onChange={(val) => setFormData({ ...formData, openai_model: val })}
                           options={[
-                            { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Default)' },
+                            { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Default)' },
                             { value: 'gpt-4o', label: 'GPT-4o (Omni)' },
-                            { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+                            { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
                             { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' }
                           ]}
                           triggerClassName=""

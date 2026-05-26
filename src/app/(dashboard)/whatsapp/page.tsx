@@ -289,7 +289,7 @@ export default function WhatsAppPage() {
     ai_provider: 'google',
     ai_api_key: '',
     ai_prompt: '',
-    ai_model: 'gemini-1.5-flash'
+    ai_model: 'gemini-2.5-flash-lite'
   });
   const [savingAi, setSavingAi] = useState(false);
 
@@ -343,7 +343,7 @@ export default function WhatsAppPage() {
       ai_provider: session.ai_provider || 'google',
       ai_api_key: session.ai_api_key || '',
       ai_prompt: session.ai_prompt || '',
-      ai_model: session.ai_model || 'gemini-1.5-flash',
+      ai_model: session.ai_model || 'gemini-2.5-flash-lite',
     });
     setShowAiModal(true);
     setActiveMenu(null);
@@ -1111,7 +1111,9 @@ export default function WhatsAppPage() {
                       onChange={(e) => setAiData(prev => ({ ...prev, ai_model: e.target.value }))}
                       className="input-standard !rounded-xl"
                     >
-                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast & Low Cost)</option>
+                      <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Fast & Low Cost)</option>
+                      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
                       <option value="gemini-1.5-pro">Gemini 1.5 Pro (High Intelligence)</option>
                     </select>
                   </div>

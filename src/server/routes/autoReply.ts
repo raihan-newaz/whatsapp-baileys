@@ -73,10 +73,10 @@ router.post('/', async (req: Request, res: Response) => {
         reply_type || 'text', reply_text || null, template_id || null, 
         media_url || null, media_type || null,
         priority || 0, case_sensitive ? 1 : 0, is_active === false ? 0 : 1,
-        use_openai ? 1 : 0, openai_api_key || null, openai_model || 'gpt-3.5-turbo', openai_base_url || null,
+        use_openai ? 1 : 0, openai_api_key || null, openai_model || 'gpt-4o-mini', openai_base_url || null,
         openai_system_prompt || null, openai_temperature || 0.7, openai_max_tokens || null,
         openai_continuous_chat ? 1 : 0,
-        use_gemini ? 1 : 0, gemini_api_key || null, gemini_model || 'gemini-1.5-flash', gemini_system_prompt || null,
+        use_gemini ? 1 : 0, gemini_api_key || null, gemini_model || 'gemini-2.5-flash-lite', gemini_system_prompt || null,
         reply_delay || 0
       ]
     );

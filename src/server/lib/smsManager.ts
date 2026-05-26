@@ -12,7 +12,7 @@ export interface SmsResponse {
 }
 
 export interface GatewayConfig {
-    token: string;
+    token?: string;
     senderId?: string;
     [key: string]: any;
 }
@@ -20,10 +20,12 @@ export interface GatewayConfig {
 export class SmsManager {
     private provider: string;
     private config: GatewayConfig;
+    private userId?: string;
 
-    constructor(provider: string, config: GatewayConfig) {
+    constructor(provider: string, config: GatewayConfig, userId?: string) {
         this.provider = provider;
         this.config = config;
+        this.userId = userId;
     }
 
     /**
@@ -41,9 +43,62 @@ export class SmsManager {
                 return this.sendBulkSmsBd(recipientString, message);
             case 'Alpha SMS':
                 return this.sendAlphaSms(recipientString, message);
+            case 'Android App':
+                return this.sendAndroidSms(recipientString, message);
             default:
                 throw new Error(`Provider ${this.provider} is not yet implemented.`);
         }
+    }
+
+    private async sendAndroidSms(to: string, message: string): Promise<SmsResponse[]> {
+        if (!this.userId && !this.config.deviceId) {
+            throw new Error('User ID or Device ID is required to send Android SMS');
+        }
+
+        const { io } = require('../index'); // Lazy load io to prevent circular deps
+        
+        return new Promise(async (resolve, reject) => {
+            try {
+                // Find target socket
+                let deviceQuery = 'SELECT socket_id, status FROM android_devices WHERE ';
+                let params: any[] = [];
+                
+                if (this.config.deviceId) {
+                    deviceQuery += 'id = ? AND status = "connected"';
+                    params.push(this.config.deviceId);
+                } else if (this.userId) {
+                    deviceQuery += 'user_id = ? AND status = "connected" ORDER BY last_active_at DESC LIMIT 1';
+                    params.push(this.userId);
+                }
+
+                const [rows]: any = await db.query(deviceQuery, params);
+                const device = rows[0];
+
+                if (!device || !device.socket_id) {
+                    throw new Error('No connected Android device found for this gateway');
+                }
+
+                // Send event to the device
+                // Emit an event that the android app listens to
+                io.to(device.socket_id).emit('send_sms', {
+                    to,
+                    message,
+                    messageId: Date.now().toString()
+                });
+
+                // Acknowledge sending command was delivered to the device
+                // Real delivery tracking would require webhook or callback, but we return success here
+                resolve([{
+                    to,
+                    message,
+                    status: 'success',
+                    statusmsg: 'SMS queued to Android device'
+                }]);
+            } catch (err) {
+                console.error('Error sending Android SMS:', err);
+                reject(err);
+            }
+        });
     }
 
     private async sendGreenWebSms(to: string, message: string): Promise<SmsResponse[]> {
@@ -98,9 +153,15 @@ export class SmsManager {
                 return this.getBulkSmsBdDetails();
             case 'Alpha SMS':
                 return this.getAlphaSmsDetails();
+            case 'Android App':
+                return this.getAndroidAppDetails();
             default:
                 return { balance: 'N/A', msg: `Balance check not implemented for ${this.provider}` };
         }
+    }
+
+    private async getAndroidAppDetails() {
+        return { balance: 'Unlimited (Carrier limit applies)', status: 'Active' };
     }
 
     private async getGreenWebDetails() {
@@ -152,7 +213,7 @@ export class SmsManager {
         }
 
         const config = typeof gateway.config === 'string' ? JSON.parse(gateway.config) : gateway.config;
-        return new SmsManager(gateway.provider, config);
+        return new SmsManager(gateway.provider, config, gateway.user_id);
     }
 
     /**
@@ -185,7 +246,7 @@ export class SmsManager {
         }
 
         const config = typeof gateway.config === 'string' ? JSON.parse(gateway.config) : gateway.config;
-        return new SmsManager(gateway.provider, config);
+        return new SmsManager(gateway.provider, config, gateway.user_id);
     }
 
     /**
@@ -207,7 +268,7 @@ export class SmsManager {
         }
 
         const config = typeof gateway.config === 'string' ? JSON.parse(gateway.config) : gateway.config;
-        return new SmsManager(gateway.provider, config);
+        return new SmsManager(gateway.provider, config, gateway.user_id);
     }
 
     /**

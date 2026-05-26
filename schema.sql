@@ -302,6 +302,32 @@ INSERT INTO system_settings (`key`, `value`) VALUES
 ('campaign_defaults', '{"min_interval": 20, "min_delay": 20, "max_delay": 60}')
 ON DUPLICATE KEY UPDATE `value` = VALUES(`value`);
 
+-- 17. Android Devices Table
+CREATE TABLE IF NOT EXISTS android_devices (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    device_name VARCHAR(255) DEFAULT 'WaCloud SMS Gateway',
+    connection_token VARCHAR(255) UNIQUE NOT NULL,
+    socket_id VARCHAR(255) NULL,
+    status VARCHAR(50) DEFAULT 'disconnected',
+    battery_level INT NULL,
+    default_sim INT DEFAULT 1,
+    sms_delay_seconds INT DEFAULT 0,
+    sync_mode VARCHAR(20) DEFAULT 'all',
+    last_active_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-
-
+-- 18. Android Incoming SMS Table
+CREATE TABLE IF NOT EXISTS android_incoming_sms (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    device_id VARCHAR(36) NOT NULL,
+    sender_number VARCHAR(50) NOT NULL,
+    message_content TEXT NOT NULL,
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id),
+    FOREIGN KEY (device_id) REFERENCES android_devices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

@@ -284,5 +284,66 @@ router.post('/send-transactional', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * POST /api/send-sms
+ * For WordPress plugin integration to send SMS specifically, utilizing instance_id.
+ */
+router.post('/send-sms', async (req: Request, res: Response) => {
+    const userId = (req as any).user.id;
+    const { instance_id, recipient, content } = req.body;
+
+    if (!recipient || !content) {
+        return res.status(400).json({ success: false, message: 'Recipient and content are required' });
+    }
+
+    try {
+        let smsManager: SmsManager;
+
+        if (instance_id) {
+            // Check if instance_id matches an Android Device first
+            const [androidRows]: any = await db.query('SELECT * FROM android_devices WHERE id = ? AND user_id = ?', [instance_id, userId]);
+            if (androidRows.length > 0) {
+                const device = androidRows[0];
+                if (device.status !== 'connected') {
+                    return res.status(422).json({ success: false, message: 'Android device is not connected.' });
+                }
+                smsManager = new SmsManager('Android App', { deviceId: device.id }, userId);
+            } else {
+                // Check if instance_id matches an SMS Gateway
+                const [gwRows]: any = await db.query('SELECT * FROM sms_gateways WHERE id = ? AND user_id = ?', [instance_id, userId]);
+                if (gwRows.length > 0) {
+                    const gw = gwRows[0];
+                    const config = typeof gw.config === 'string' ? JSON.parse(gw.config) : gw.config;
+                    smsManager = new SmsManager(gw.provider, config, userId);
+                } else {
+                    return res.status(404).json({ success: false, message: 'Instance ID (Android Device or SMS Gateway) not found' });
+                }
+            }
+        } else {
+            // Default SMS Gateway
+            smsManager = await SmsManager.getForUser(userId);
+        }
+
+        const smsResult = await smsManager.sendSms(recipient as string, content as string);
+        const sms_message_id = smsResult[0]?.statusmsg || 'sms_sent';
+        const msgId = generateUUID();
+
+        // Log into message_logs for API tracking
+        await db.query(`
+            INSERT INTO message_logs (
+                id, user_id, phone, message, message_id, session_name, status, source, sent_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [msgId, userId, recipient, content, sms_message_id, instance_id || 'default_sms', 'sent', 'api', new Date()]);
+
+        res.json({
+            success: true,
+            channel: 'sms',
+            message_id: sms_message_id,
+            log_id: msgId
+        });
+    } catch (err: any) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
 
 export default router;

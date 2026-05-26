@@ -15,7 +15,7 @@ interface GeminiParams {
 export async function generateGeminiResponse(params: GeminiParams): Promise<string | null> {
   const { 
     apiKey, 
-    model = 'gemini-1.5-flash', 
+    model = 'gemini-2.5-flash-lite', 
     systemPrompt, 
     userMessage, 
     temperature = 0.7,

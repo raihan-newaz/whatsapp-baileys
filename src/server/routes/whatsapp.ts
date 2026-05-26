@@ -449,7 +449,7 @@ router.post('/ai-settings', async (req: Request, res: Response) => {
         ai_provider || 'google',
         ai_api_key || null,
         ai_prompt || null,
-        ai_model || 'gemini-1.5-flash',
+        ai_model || 'gemini-2.5-flash-lite',
         ai_reply_delay || 0,
         instance_id,
         userId

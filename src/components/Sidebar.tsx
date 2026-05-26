@@ -26,6 +26,8 @@ const SIDEBAR_MENU = [
     items: [
       { href: '/whatsapp', label: 'Connections', icon: Smartphone },
       { href: '/sms-gateways', label: 'SMS Gateways', icon: MessageSquare },
+      { href: '/sms-gateways/android-devices', label: 'Android Devices', icon: Smartphone },
+      { href: '/sms-gateways/incoming-sms', label: 'Incoming SMS', icon: Inbox },
       { href: '/developer', label: 'Developer API', icon: ScrollText },
     ]
   },

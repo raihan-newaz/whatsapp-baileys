@@ -37,11 +37,13 @@ class AiManager {
         }
 
         const genAI = new GoogleGenerativeAI(config.apiKey);
-        const requestedModel = (config.model || "gemini-1.5-flash").trim();
+        const requestedModel = (config.model || "gemini-2.5-flash-lite").trim();
         
         // List of models to try in order
         const modelsToTry = [
             requestedModel,
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
             "gemini-1.5-flash",
             "gemini-1.5-pro",
             "gemini-pro"
@@ -90,7 +92,7 @@ class AiManager {
 
         return await generateAIResponse({
             apiKey: config.apiKey,
-            model: config.model || 'gpt-3.5-turbo',
+            model: config.model || 'gpt-4o-mini',
             userMessage: message,
             systemPrompt: config.prompt || "You are a helpful assistant."
         });

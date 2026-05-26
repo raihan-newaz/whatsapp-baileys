@@ -9,7 +9,7 @@ import {
 import { apiFetch } from '@/lib/api';
 import { createClient } from '@/lib/supabase';
 
-const PROVIDERS = ['GreenWeb', 'eSMS (Diana Host)', 'BulkSMSBD', 'Alpha SMS'];
+const PROVIDERS = ['GreenWeb', 'eSMS (Diana Host)', 'BulkSMSBD', 'Alpha SMS', 'Android App'];
 
 const PROVIDER_CONFIGS: Record<string, any[]> = {
   'GreenWeb': [
@@ -25,6 +25,9 @@ const PROVIDER_CONFIGS: Record<string, any[]> = {
   ],
   'Alpha SMS': [
     { key: 'token', label: 'API Key', type: 'password', placeholder: 'Enter Alpha SMS API Key', note: 'Get it from Alpha SMS panel' }
+  ],
+  'Android App': [
+    { key: 'deviceId', label: 'Select Android Device', type: 'text', placeholder: 'Enter Device ID (Leave blank for default)', note: 'Connect your phone in the Android Devices page first' }
   ]
 };
 
@@ -279,13 +282,22 @@ export default function SmsGatewaysPage() {
             Configure SMS providers for transactional message failover
           </p>
         </div>
-        <button
-          onClick={handleAddGateway}
-          className="flex items-center gap-2 px-4 py-2 bg-[#005a41] hover:bg-[#004a35] text-white rounded-lg font-semibold transition-all shadow-sm active:scale-95 text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Add Gateway
-        </button>
+        <div className="flex gap-2">
+          <a
+            href="/sms-gateways/android-devices"
+            className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold transition-all shadow-sm active:scale-95 text-sm"
+          >
+            <Smartphone className="w-4 h-4" />
+            Android Devices
+          </a>
+          <button
+            onClick={handleAddGateway}
+            className="flex items-center gap-2 px-4 py-2 bg-[#005a41] hover:bg-[#004a35] text-white rounded-lg font-semibold transition-all shadow-sm active:scale-95 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Add Gateway
+          </button>
+        </div>
       </div>
 
       {/* Info Banner */}

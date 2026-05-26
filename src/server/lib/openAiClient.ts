@@ -15,7 +15,7 @@ interface OpenAIParams {
 export async function generateAIResponse(params: OpenAIParams): Promise<string | null> {
   const { 
     apiKey, 
-    model = 'gpt-3.5-turbo', 
+    model = 'gpt-4o-mini', 
     baseUrl = 'https://api.openai.com/v1', 
     systemPrompt, 
     userMessage, 
