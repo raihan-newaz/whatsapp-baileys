@@ -277,8 +277,7 @@ CREATE TABLE IF NOT EXISTS sms_gateways (
     is_default BOOLEAN DEFAULT FALSE,
     status VARCHAR(50) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES profiles(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Seed default system settings
@@ -316,8 +315,7 @@ CREATE TABLE IF NOT EXISTS android_devices (
     sync_mode VARCHAR(20) DEFAULT 'all',
     last_active_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES profiles(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- 18. Android Incoming SMS Table
@@ -327,7 +325,5 @@ CREATE TABLE IF NOT EXISTS android_incoming_sms (
     device_id VARCHAR(36) NOT NULL,
     sender_number VARCHAR(50) NOT NULL,
     message_content TEXT NOT NULL,
-    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES profiles(id),
-    FOREIGN KEY (device_id) REFERENCES android_devices(id) ON DELETE CASCADE
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
