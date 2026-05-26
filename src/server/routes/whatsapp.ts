@@ -139,7 +139,25 @@ router.get('/sessions/:userId', async (req: Request, res: Response) => {
       return s;
     }));
 
-    res.json(syncedSessions);
+    // Fetch Android Devices
+    const [androidRows] = await db.query('SELECT * FROM android_devices WHERE user_id = ?', [userId]);
+    const androidDevices = (androidRows as any[]).map(a => ({
+      ...a,
+      session_name: a.device_name + ' (Android)',
+      phone_number: 'Android App',
+      device_type: 'android'
+    }));
+
+    // Fetch Custom SMS Gateways
+    const [gatewayRows] = await db.query('SELECT * FROM sms_gateways WHERE user_id = ?', [userId]);
+    const smsGateways = (gatewayRows as any[]).map(g => ({
+      ...g,
+      session_name: g.name + ' (API)',
+      phone_number: g.provider,
+      device_type: 'sms_gateway'
+    }));
+
+    res.json([...syncedSessions, ...androidDevices, ...smsGateways]);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

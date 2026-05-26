@@ -3,6 +3,7 @@ import { sendMessage, isNumberRegistered, getSessionStatus } from './whatsappMan
 import { checkEmergencyStatus } from './safetyManager';
 import { prepareMessage } from './campaignHelper';
 import { NotificationManager } from './notificationManager';
+import { SmsManager } from './smsManager';
 
 let workerRunning = false;
 const batchTracker: Map<string, { count: number; lastPause: number }> = new Map();
@@ -23,10 +24,15 @@ async function processQueue(): Promise<void> {
     const [jobs] = await db.query(`
       SELECT q.*, c.device_mode, c.spintax, c.verify_numbers, c.replied_only, c.window_24h, 
              c.uniqueness, c.batch_pause_msgs, c.batch_pause_wait, c.fail_limit,
-             c.start_time, c.end_time, s.session_name
+             c.start_time, c.end_time, 
+             s.session_name as whatsapp_name,
+             a.device_name as android_name,
+             g.name as gateway_name
       FROM message_queue q
       JOIN campaigns c ON q.campaign_id = c.id
-      JOIN whatsapp_sessions s ON q.session_id = s.id
+      LEFT JOIN whatsapp_sessions s ON q.session_id = s.id
+      LEFT JOIN android_devices a ON q.session_id = a.id
+      LEFT JOIN sms_gateways g ON q.session_id = g.id
       WHERE q.status = 'pending' AND q.scheduled_at <= NOW()
       ORDER BY q.scheduled_at ASC
       LIMIT 10
@@ -42,7 +48,13 @@ async function processQueue(): Promise<void> {
       const campaignId = job.campaign_id;
       const userId = job.user_id;
       processedCampaignIds.add(campaignId);
-      const sessionName = job.session_name || 'default';
+      
+      const isWhatsapp = !!job.whatsapp_name;
+      const isAndroid = !!job.android_name;
+      const isGateway = !!job.gateway_name;
+      
+      const deviceType = isWhatsapp ? 'whatsapp' : (isAndroid ? 'android' : (isGateway ? 'sms_gateway' : 'unknown'));
+      const sessionName = job.whatsapp_name || job.android_name || job.gateway_name || 'default';
 
       // 1. Check Campaign Time Window (start_time / end_time)
       if (job.start_time || job.end_time) {
@@ -83,14 +95,18 @@ async function processQueue(): Promise<void> {
         }
       }
 
-      // 0. Check if Session is still connected
-      const sessionStatus = await getSessionStatus(userId, sessionName);
-      if (sessionStatus !== 'connected') {
-        console.log(`[Queue] ⚠️ Skipping job ${job.id}: Session ${sessionName} is ${sessionStatus}`);
-        // If it's disconnected, we might want to fail the job so it doesn't stay pending forever
-        // or just skip it. Let's fail it after a few attempts or if explicitly disconnected.
-        await db.query('UPDATE message_queue SET status = ?, error_message = ? WHERE id = ?', ['failed', `WhatsApp session ${sessionName} is not connected`, job.id]);
-        continue;
+      // 0. Check if Session is still connected (Only for WhatsApp)
+      if (deviceType === 'whatsapp') {
+        const sessionStatus = await getSessionStatus(userId, sessionName);
+        if (sessionStatus !== 'connected') {
+          console.log(`[Queue] ⚠️ Skipping job ${job.id}: Session ${sessionName} is ${sessionStatus}`);
+          await db.query('UPDATE message_queue SET status = ?, error_message = ? WHERE id = ?', ['failed', `WhatsApp session ${sessionName} is not connected`, job.id]);
+          continue;
+        }
+      } else if (deviceType === 'unknown') {
+         console.log(`[Queue] ⚠️ Skipping job ${job.id}: Device not found`);
+         await db.query('UPDATE message_queue SET status = ?, error_message = ? WHERE id = ?', ['failed', `Device not found`, job.id]);
+         continue;
       }
 
       // Mark as 'processing'
@@ -127,7 +143,18 @@ async function processQueue(): Promise<void> {
         }
 
         // Send Message
-        const msgId = await sendMessage(userId, sessionName, job.phone, job.message, job.media_url || undefined, job.media_type || undefined);
+        let msgId;
+        if (deviceType === 'android') {
+          msgId = generateUUID();
+          const smsManager = new SmsManager('Android App', { deviceId: job.session_id }, userId);
+          await smsManager.sendSms(job.phone, job.message);
+        } else if (deviceType === 'sms_gateway') {
+          msgId = generateUUID();
+          const smsManager = await SmsManager.getByGatewayId(job.session_id);
+          await smsManager.sendSms(job.phone, job.message);
+        } else {
+          msgId = await sendMessage(userId, sessionName, job.phone, job.message, job.media_url || undefined, job.media_type || undefined);
+        }
 
         // Success
         await db.query('UPDATE message_queue SET status = ?, processed_at = NOW() WHERE id = ?', ['sent', job.id]);

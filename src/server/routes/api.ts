@@ -52,8 +52,38 @@ router.get('/devices', async (req: Request, res: Response) => {
             name: r.name,
             phone_number: r.phone_number || 'Not Linked',
             status: r.status,
-            connection_type: 'qr' // Defaulting to QR as it's the primary method
+            connection_type: 'whatsapp'
         }));
+
+        // Fetch Android Devices
+        const [androidRows]: any = await db.query(
+            'SELECT id as instance_id, device_name as name, status, created_at FROM android_devices WHERE user_id = ?',
+            [userId]
+        );
+        androidRows.forEach((r: any) => {
+            data.push({
+                instance_id: r.instance_id,
+                name: r.name + ' (Android SMS)',
+                phone_number: 'Android Gateway',
+                status: r.status,
+                connection_type: 'android'
+            });
+        });
+
+        // Fetch Custom SMS Gateways
+        const [gatewayRows]: any = await db.query(
+            'SELECT id as instance_id, name, status, provider, created_at FROM sms_gateways WHERE user_id = ?',
+            [userId]
+        );
+        gatewayRows.forEach((r: any) => {
+            data.push({
+                instance_id: r.instance_id,
+                name: r.name + ` (${r.provider})`,
+                phone_number: 'API Gateway',
+                status: r.status,
+                connection_type: 'sms_gateway'
+            });
+        });
 
         res.json({ success: true, data });
     } catch (err: any) {

@@ -151,10 +151,14 @@ router.post('/', async (req: Request, res: Response) => {
     const [contactRows] = await db.query('SELECT * FROM contacts WHERE user_id = ? AND group_id = ?', [userId, group_id]);
     const contacts = contactRows as any[];
 
-    const [sessionRows] = await db.query('SELECT created_at FROM whatsapp_sessions WHERE id = ?', [sessionId]);
-    const sessionData = (sessionRows as any[])[0];
+    const [wsRows] = await db.query('SELECT created_at FROM whatsapp_sessions WHERE id = ?', [sessionId]);
+    const [adRows] = await db.query('SELECT created_at FROM android_devices WHERE id = ?', [sessionId]);
+    const [sgRows] = await db.query('SELECT created_at FROM sms_gateways WHERE id = ?', [sessionId]);
     
-    if (!contacts || !sessionData) return res.status(400).json({ error: 'Contacts or session not found' });
+    const sessionData = (wsRows as any[])[0] || (adRows as any[])[0] || (sgRows as any[])[0];
+    
+    if (!contacts) return res.status(400).json({ error: 'Contacts not found' });
+    if (!sessionData) return res.status(400).json({ error: 'Device session not found' });
     if (!templateContent) return res.status(400).json({ error: 'Campaign content is missing' });
 
     // If in compose mode and media was provided in body, use it
