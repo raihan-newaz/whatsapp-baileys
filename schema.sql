@@ -279,7 +279,7 @@ CREATE TABLE IF NOT EXISTS sms_gateways (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES profiles(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+);
 
 -- Seed default system settings
 INSERT INTO system_settings (`key`, `value`) VALUES
@@ -318,7 +318,7 @@ CREATE TABLE IF NOT EXISTS android_devices (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES profiles(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+);
 
 -- 18. Android Incoming SMS Table
 CREATE TABLE IF NOT EXISTS android_incoming_sms (
@@ -330,4 +330,4 @@ CREATE TABLE IF NOT EXISTS android_incoming_sms (
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES profiles(id),
     FOREIGN KEY (device_id) REFERENCES android_devices(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+);
