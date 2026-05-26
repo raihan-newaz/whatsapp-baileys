@@ -145,7 +145,8 @@ router.get('/sessions/:userId', async (req: Request, res: Response) => {
       ...a,
       session_name: a.device_name + ' (Android)',
       phone_number: 'Android App',
-      device_type: 'android'
+      device_type: 'android',
+      status: a.status === 'active' ? 'connected' : a.status
     }));
 
     // Fetch Custom SMS Gateways
@@ -154,7 +155,8 @@ router.get('/sessions/:userId', async (req: Request, res: Response) => {
       ...g,
       session_name: g.name + ' (API)',
       phone_number: g.provider,
-      device_type: 'sms_gateway'
+      device_type: 'sms_gateway',
+      status: g.status === 'active' ? 'connected' : g.status
     }));
 
     res.json([...syncedSessions, ...androidDevices, ...smsGateways]);

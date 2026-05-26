@@ -360,7 +360,11 @@ export default function AutoReplyPage() {
           onChange={setFilterDevice}
           options={[
             { value: 'all', label: 'All Devices' },
-            ...sessions.map(s => ({ value: s.id, label: s.session_name || s.name, icon: <Smartphone className="w-4 h-4" /> }))
+            ...sessions.map(s => ({ 
+              value: s.id, 
+              label: s.session_name || s.name || s.phone_number || 'Unnamed Device', 
+              icon: s.device_type === 'android' ? <Smartphone className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" /> 
+            }))
           ]}
           className="w-[200px]"
           triggerClassName=""
@@ -522,7 +526,11 @@ export default function AutoReplyPage() {
                   <CustomSelect
                     value={formData.session_id}
                     onChange={(val) => setFormData({ ...formData, session_id: val })}
-                    options={sessions.map(s => ({ value: s.id, label: s.session_name || s.name, icon: <Smartphone className="w-4 h-4" /> }))}
+                    options={sessions.map(s => ({ 
+                      value: s.id, 
+                      label: s.session_name || s.name || s.phone_number || 'Unnamed Device', 
+                      icon: s.device_type === 'android' ? <Smartphone className="w-4 h-4" /> : <MessageSquare className="w-4 h-4" /> 
+                    }))}
                     placeholder="Select device"
                     triggerClassName=""
                   />

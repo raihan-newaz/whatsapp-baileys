@@ -314,7 +314,9 @@ export default function CampaignsPage() {
                            options={sessions.map(s => ({
                              value: s.session_name,
                              label: s.session_name,
-                             icon: <Smartphone className="w-4 h-4" />
+                             icon: s.device_type === 'android' || s.device_type === 'sms_gateway' 
+                               ? <Smartphone className="w-4 h-4" /> 
+                               : <MessageSquare className="w-4 h-4" />
                            }))}
                            placeholder="Select a device"
                          />
