@@ -55,35 +55,39 @@ router.get('/devices', async (req: Request, res: Response) => {
             connection_type: 'whatsapp'
         }));
 
-        // Fetch Android Devices
-        const [androidRows]: any = await db.query(
-            'SELECT id as instance_id, device_name as name, status, created_at FROM android_devices WHERE user_id = ?',
-            [userId]
-        );
-        androidRows.forEach((r: any) => {
-            data.push({
-                instance_id: r.instance_id,
-                name: r.name + ' (Android SMS)',
-                phone_number: 'Android Gateway',
-                status: r.status,
-                connection_type: 'android'
+        // Fetch Android Devices (graceful fallback if table missing)
+        try {
+            const [androidRows]: any = await db.query(
+                'SELECT id as instance_id, device_name as name, status, created_at FROM android_devices WHERE user_id = ?',
+                [userId]
+            );
+            androidRows.forEach((r: any) => {
+                data.push({
+                    instance_id: r.instance_id,
+                    name: r.name + ' (Android SMS)',
+                    phone_number: 'Android Gateway',
+                    status: r.status,
+                    connection_type: 'android'
+                });
             });
-        });
+        } catch (e) { /* android_devices table may not exist */ }
 
-        // Fetch Custom SMS Gateways
-        const [gatewayRows]: any = await db.query(
-            'SELECT id as instance_id, name, status, provider, created_at FROM sms_gateways WHERE user_id = ?',
-            [userId]
-        );
-        gatewayRows.forEach((r: any) => {
-            data.push({
-                instance_id: r.instance_id,
-                name: r.name + ` (${r.provider})`,
-                phone_number: 'API Gateway',
-                status: r.status,
-                connection_type: 'sms_gateway'
+        // Fetch Custom SMS Gateways (graceful fallback if table missing)
+        try {
+            const [gatewayRows]: any = await db.query(
+                'SELECT id as instance_id, name, status, provider, created_at FROM sms_gateways WHERE user_id = ?',
+                [userId]
+            );
+            gatewayRows.forEach((r: any) => {
+                data.push({
+                    instance_id: r.instance_id,
+                    name: r.name + ` (${r.provider})`,
+                    phone_number: 'API Gateway',
+                    status: r.status,
+                    connection_type: 'sms_gateway'
+                });
             });
-        });
+        } catch (e) { /* sms_gateways table may not exist */ }
 
         res.json({ success: true, data });
     } catch (err: any) {
