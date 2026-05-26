@@ -95,7 +95,8 @@ export default function CampaignsPage() {
       setCampaigns(c || []);
       setGroups(g || []);
       setTemplates(t || []);
-      const connectedSessions = (s || []).filter((sess: any) => sess.status === 'connected');
+      // Filter out android and sms_gateway for campaigns because SMS doesn't support multimedia
+      const connectedSessions = (s || []).filter((sess: any) => sess.status === 'connected' && (!sess.device_type || sess.device_type === 'whatsapp'));
       setSessions(connectedSessions);
       setMedia(m || []);
       
