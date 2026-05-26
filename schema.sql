@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS message_queue (
     media_url TEXT,
     media_type VARCHAR(50),
     status VARCHAR(50) DEFAULT 'pending',
+    source VARCHAR(50) DEFAULT 'system',
     error_message TEXT,
     scheduled_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -129,6 +130,7 @@ CREATE TABLE IF NOT EXISTS message_logs (
     media_url TEXT,
     media_type VARCHAR(100),
     status VARCHAR(50),
+    source VARCHAR(50) DEFAULT 'system',
     ack INT DEFAULT 0,
     error_message TEXT,
     delivered_at TIMESTAMP NULL,
@@ -278,6 +280,17 @@ CREATE TABLE IF NOT EXISTS sms_gateways (
     status VARCHAR(50) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 17. Media Table
+CREATE TABLE IF NOT EXISTS media (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'document',
+    size BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Seed default system settings
