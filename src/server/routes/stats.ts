@@ -38,6 +38,23 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const [waRows] = await db.query('SELECT status FROM whatsapp_sessions WHERE user_id = ?', [userId]);
+    
+    let androidConnected = false;
+    let androidCount = 0;
+    try {
+      const [androidRows] = await db.query('SELECT status FROM android_devices WHERE user_id = ?', [userId]);
+      androidConnected = (androidRows as any[]).some(r => r.status === 'active');
+      androidCount = (androidRows as any[]).length;
+    } catch (e) {}
+
+    let apiCount = 0;
+    try {
+      const [apiRows] = await db.query('SELECT status FROM sms_gateways WHERE user_id = ?', [userId]);
+      apiCount = (apiRows as any[]).length;
+    } catch (e) {}
+
+    const isWaConnected = (waRows as any[]).some(r => r.status === 'connected');
+    const totalDeviceConnections = (waRows as any[]).length + androidCount + apiCount;
 
     // 2. Fetch Usage Stats
     const [contactRows] = await db.query('SELECT COUNT(*) as count FROM contacts WHERE user_id = ?', [userId]);
@@ -55,7 +72,7 @@ router.get('/', async (req: Request, res: Response) => {
     const planLimits = limitsAll[profile.plan] || limitsAll['free_trial'] || {};
 
     res.json({
-      whatsappStatus: (waRows as any[]).some(r => r.status === 'connected') ? 'connected' : 'disconnected',
+      whatsappStatus: (isWaConnected || androidConnected) ? 'connected' : 'disconnected',
       totalContacts: (contactRows as any[])[0].count || 0,
       totalCampaigns: (campaignRows as any[])[0].count || 0,
       sentToday: (sentTodayRows as any[])[0].count || 0,
@@ -63,7 +80,7 @@ router.get('/', async (req: Request, res: Response) => {
       queuePending: (queueRows as any[])[0].count || 0,
       plan_expires_at: profile.plan_expires_at,
       usage: {
-        deviceConnections: { current: (waRows as any[]).length, limit: planLimits.accounts ?? 1 },
+        deviceConnections: { current: totalDeviceConnections, limit: planLimits.accounts ?? 1 },
         messagesMonthly: { current: (sentMonthRows as any[])[0].count || 0, limit: (planLimits.monthly_msgs ?? (planLimits.daily_msgs ? planLimits.daily_msgs * 30 : 2000 * 30)) },
         contacts: { current: (contactRows as any[])[0].count || 0, limit: planLimits.max_contacts ?? 25000 },
         numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: planLimits.number_checks_limit ?? 3000 },

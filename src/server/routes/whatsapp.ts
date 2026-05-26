@@ -139,25 +139,35 @@ router.get('/sessions/:userId', async (req: Request, res: Response) => {
       return s;
     }));
 
-    // Fetch Android Devices
-    const [androidRows] = await db.query('SELECT * FROM android_devices WHERE user_id = ?', [userId]);
-    const androidDevices = (androidRows as any[]).map(a => ({
-      ...a,
-      session_name: a.device_name + ' (Android)',
-      phone_number: 'Android App',
-      device_type: 'android',
-      status: a.status === 'active' ? 'connected' : a.status
-    }));
+    // Fetch Android Devices (Graceful fallback if table doesn't exist)
+    let androidDevices: any[] = [];
+    try {
+      const [androidRows] = await db.query('SELECT * FROM android_devices WHERE user_id = ?', [userId]);
+      androidDevices = (androidRows as any[]).map(a => ({
+        ...a,
+        session_name: a.device_name + ' (Android)',
+        phone_number: 'Android App',
+        device_type: 'android',
+        status: a.status === 'active' ? 'connected' : a.status
+      }));
+    } catch (e: any) {
+      console.warn('android_devices table query failed (might not exist):', e.message);
+    }
 
-    // Fetch Custom SMS Gateways
-    const [gatewayRows] = await db.query('SELECT * FROM sms_gateways WHERE user_id = ?', [userId]);
-    const smsGateways = (gatewayRows as any[]).map(g => ({
-      ...g,
-      session_name: g.name + ' (API)',
-      phone_number: g.provider,
-      device_type: 'sms_gateway',
-      status: g.status === 'active' ? 'connected' : g.status
-    }));
+    // Fetch Custom SMS Gateways (Graceful fallback if table doesn't exist)
+    let smsGateways: any[] = [];
+    try {
+      const [gatewayRows] = await db.query('SELECT * FROM sms_gateways WHERE user_id = ?', [userId]);
+      smsGateways = (gatewayRows as any[]).map(g => ({
+        ...g,
+        session_name: g.name + ' (API)',
+        phone_number: g.provider,
+        device_type: 'sms_gateway',
+        status: g.status === 'active' ? 'connected' : g.status
+      }));
+    } catch (e: any) {
+      console.warn('sms_gateways table query failed (might not exist):', e.message);
+    }
 
     res.json([...syncedSessions, ...androidDevices, ...smsGateways]);
   } catch (err: any) {

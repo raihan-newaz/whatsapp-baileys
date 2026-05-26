@@ -33,7 +33,7 @@ export default function ExtractorPage() {
       
       try {
         const s = await apiFetch(`/api/whatsapp/sessions/${data.user.id}`);
-        const connected = s.filter((sess: any) => sess.status === 'connected');
+        const connected = s.filter((sess: any) => sess.status === 'connected' && (!sess.device_type || sess.device_type === 'whatsapp'));
         setSessions(connected || []);
         if (connected && connected.length > 0) {
           setActiveSession(connected[0].session_name);
