@@ -78,10 +78,20 @@ router.post('/', async (req: Request, res: Response) => {
     const safe_max = Math.max(random_delay_max, defaults.max_delay);
 
     // Check user plan and basic dynamic limits
-    const [profileRows] = await db.query('SELECT plan, role FROM profiles WHERE id = ?', [userId]);
+    const [profileRows] = await db.query('SELECT plan, role, plan_expires_at FROM profiles WHERE id = ?', [userId]);
     const profile = (profileRows as any[])[0];
     const plan = profile?.plan || 'free';
     const role = profile?.role || 'user';
+
+    // Check Plan Expiration
+    const isUnlimited = plan.toLowerCase() === 'admin' || !profile?.plan_expires_at;
+    if (!isUnlimited) {
+      const expiry = new Date(profile.plan_expires_at);
+      if (expiry.getTime() < Date.now()) {
+        return res.status(402).json({ error: 'Your subscription has expired. Please renew your plan.' });
+      }
+    }
+
     const limits = await getPlanLimits(plan, role);
     let maxDailyLimit = limits.daily_msgs;
 
@@ -151,11 +161,41 @@ router.post('/', async (req: Request, res: Response) => {
     const [contactRows] = await db.query('SELECT * FROM contacts WHERE user_id = ? AND group_id = ?', [userId, group_id]);
     const contacts = contactRows as any[];
 
-    const [wsRows] = await db.query('SELECT created_at FROM whatsapp_sessions WHERE id = ?', [sessionId]);
-    const [adRows] = await db.query('SELECT created_at FROM android_devices WHERE id = ?', [sessionId]);
-    const [sgRows] = await db.query('SELECT created_at FROM sms_gateways WHERE id = ?', [sessionId]);
+    let sessionData: any = null;
     
-    const sessionData = (wsRows as any[])[0] || (adRows as any[])[0] || (sgRows as any[])[0];
+    // 1. Try WhatsApp Session
+    try {
+      const [wsRows] = await db.query('SELECT created_at FROM whatsapp_sessions WHERE id = ?', [sessionId]);
+      if (wsRows && (wsRows as any[])[0]) {
+        sessionData = (wsRows as any[])[0];
+      }
+    } catch (e: any) {
+      console.warn('[Campaigns] Failed to query whatsapp_sessions:', e.message);
+    }
+
+    // 2. Try Android Device (only if not found in WhatsApp)
+    if (!sessionData) {
+      try {
+        const [adRows] = await db.query('SELECT created_at FROM android_devices WHERE id = ?', [sessionId]);
+        if (adRows && (adRows as any[])[0]) {
+          sessionData = (adRows as any[])[0];
+        }
+      } catch (e: any) {
+        // Ignore table missing / query errors gracefully
+      }
+    }
+
+    // 3. Try SMS Gateway (only if not found in WhatsApp or Android)
+    if (!sessionData) {
+      try {
+        const [sgRows] = await db.query('SELECT created_at FROM sms_gateways WHERE id = ?', [sessionId]);
+        if (sgRows && (sgRows as any[])[0]) {
+          sessionData = (sgRows as any[])[0];
+        }
+      } catch (e: any) {
+        // Ignore table missing / query errors gracefully
+      }
+    }
     
     if (!contacts) return res.status(400).json({ error: 'Contacts not found' });
     if (!sessionData) return res.status(400).json({ error: 'Device session not found' });

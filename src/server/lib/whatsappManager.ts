@@ -419,6 +419,37 @@ export async function createWhatsAppSession(
             ack: ackVal,
             status
           });
+
+          // Send Webhook Delivery Tracking if webhook_url exists for this message
+          const [msgLogs]: any = await db.query('SELECT webhook_url FROM message_logs WHERE message_id = ?', [messageWid]);
+          if (msgLogs && msgLogs.length > 0 && msgLogs[0].webhook_url) {
+            const webhookUrl = msgLogs[0].webhook_url;
+            const [profileRows]: any = await db.query('SELECT api_key FROM profiles WHERE id = ?', [userId]);
+            const userApiKey = profileRows && profileRows.length > 0 ? profileRows[0].api_key : '';
+
+            if (userApiKey) {
+              const payload = JSON.stringify({
+                message_id: messageWid,
+                status: status,
+                timestamp: ts
+              });
+
+              const crypto = await import('crypto');
+              const signature = crypto.createHmac('sha256', userApiKey).update(payload).digest('hex');
+
+              fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x_wacloud_signature': signature
+                },
+                body: payload
+              }).catch(err => {
+                console.error('[Webhook] Failed to send delivery webhook:', err.message);
+              });
+            }
+          }
+
         } catch (e) {
           console.error('[WhatsApp] Failed to update message ACK:', e);
         }
@@ -747,6 +778,20 @@ export async function sendMessage(
   mediaUrl?: string,
   mediaType?: string
 ): Promise<string> {
+  // Check user subscription validity
+  const [profileRows]: any = await db.query('SELECT plan, plan_expires_at FROM profiles WHERE id = ?', [userId]);
+  const profile = profileRows[0];
+  if (profile) {
+    const plan = profile.plan ? profile.plan.toLowerCase() : '';
+    const isUnlimited = plan === 'admin' || !profile.plan_expires_at;
+    if (!isUnlimited) {
+      const expiry = new Date(profile.plan_expires_at);
+      if (expiry.getTime() < Date.now()) {
+        throw new Error('Your subscription has expired. Please renew your plan.');
+      }
+    }
+  }
+
   const key = getClientKey(userId, sessionName);
   const sock = clients.get(key);
   if (!sock) throw new Error('WhatsApp session not found or not connected');

@@ -125,7 +125,8 @@ router.get('/device-status/:instance_id', async (req: Request, res: Response) =>
  */
 router.post('/send-message', async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
-    const { instance_id, recipient, content, media_url, media_type } = req.body;
+    const { instance_id, recipient, content, media_url, media_type, message_type, webhook_url } = req.body;
+    const finalMediaType = media_type || message_type;
 
     if (!recipient || !content) {
         return res.status(400).json({ success: false, message: 'Recipient and content are required' });
@@ -156,13 +157,13 @@ router.post('/send-message', async (req: Request, res: Response) => {
             sessionName = connected[0].session_name;
         }
 
-        const msgId = await sendMessage(userId, sessionName, recipient as string, content as string, media_url as string, media_type as string);
+        const msgId = await sendMessage(userId, sessionName, recipient as string, content as string, media_url as string, finalMediaType as string);
 
         await db.query(`
             INSERT INTO message_logs (
-                id, user_id, phone, message, message_id, session_name, media_url, media_type, status, source, ack, sent_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [generateUUID(), userId, recipient, content, msgId, sessionName, media_url || null, media_type || null, 'sent', 'api', 1, new Date()]);
+                id, user_id, phone, message, message_id, session_name, media_url, media_type, status, source, ack, sent_at, webhook_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [generateUUID(), userId, recipient, content, msgId, sessionName, media_url || null, finalMediaType || null, 'sent', 'api', 1, new Date(), webhook_url || null]);
 
         res.json({ 
             success: true, 
@@ -191,7 +192,7 @@ router.get('/message-status/:message_id', async (req: Request, res: Response) =>
 
         res.json({ 
             success: true, 
-            status: log ? log.status : (ack ? (ack === 3 ? 'delivered' : ack === 4 ? 'read' : 'sent') : 'unknown'),
+            status: log ? log.status : (ack ? (ack >= 3 ? 'read' : ack === 2 ? 'delivered' : 'sent') : 'unknown'),
             delivered_at: log?.delivered_at,
             read_at: log?.read_at
         });
@@ -234,7 +235,8 @@ router.get('/check-whatsapp/:instance_id/:phone', async (req: Request, res: Resp
  */
 router.post('/send-transactional', async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
-    const { to, device_id, whatsapp, sms, failover_mode, sms_gateway_id } = req.body;
+    const { to, device_id, instance_id, whatsapp, sms, failover_mode, sms_gateway_id } = req.body;
+    const finalDeviceId = device_id || instance_id;
 
     const recipient = to || req.body.recipient;
     const waContent = whatsapp?.message || req.body.content;
@@ -254,8 +256,10 @@ router.post('/send-transactional', async (req: Request, res: Response) => {
     try {
         // 1. Try WhatsApp
         const [rows]: any = await db.query(
-            'SELECT id, session_name, status FROM whatsapp_sessions WHERE (id = ? OR 1=1) AND user_id = ? AND status = "connected" LIMIT 1',
-            [device_id, userId]
+            finalDeviceId 
+              ? 'SELECT id, session_name, status FROM whatsapp_sessions WHERE id = ? AND user_id = ? AND status = "connected" LIMIT 1'
+              : 'SELECT id, session_name, status FROM whatsapp_sessions WHERE user_id = ? AND status = "connected" LIMIT 1',
+            finalDeviceId ? [finalDeviceId, userId] : [userId]
         );
         
         if (rows.length > 0) {
@@ -273,8 +277,13 @@ router.post('/send-transactional', async (req: Request, res: Response) => {
 
         // 2. Failover to SMS if needed
         if (failover && (failover_mode === 'auto' || !failover_mode)) {
-            const smsManager = await SmsManager.getForUser(userId);
+            let smsManager: SmsManager;
             try {
+                if (sms_gateway_id) {
+                    smsManager = await SmsManager.getByGatewayId(sms_gateway_id);
+                } else {
+                    smsManager = await SmsManager.getForUser(userId);
+                }
                 const smsResult = await smsManager.sendSms(recipient as string, smsContent as string);
                 sms_message_id = smsResult[0]?.statusmsg || 'sms_sent';
                 channel = 'sms';
@@ -324,7 +333,7 @@ router.post('/send-transactional', async (req: Request, res: Response) => {
  */
 router.post('/send-sms', async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
-    const { instance_id, recipient, content } = req.body;
+    const { instance_id, recipient, content, webhook_url } = req.body;
 
     if (!recipient || !content) {
         return res.status(400).json({ success: false, message: 'Recipient and content are required' });
@@ -365,9 +374,9 @@ router.post('/send-sms', async (req: Request, res: Response) => {
         // Log into message_logs for API tracking
         await db.query(`
             INSERT INTO message_logs (
-                id, user_id, phone, message, message_id, session_name, status, source, sent_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [msgId, userId, recipient, content, sms_message_id, instance_id || 'default_sms', 'sent', 'api', new Date()]);
+                id, user_id, phone, message, message_id, session_name, status, source, sent_at, webhook_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [msgId, userId, recipient, content, sms_message_id, instance_id || 'default_sms', 'sent', 'api', new Date(), webhook_url || null]);
 
         res.json({
             success: true,

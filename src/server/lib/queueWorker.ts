@@ -20,19 +20,15 @@ async function processQueue(): Promise<void> {
       return;
     }
 
-    // Fetch messages that are due and still pending, joined with campaign settings
+    // Fetch messages that are due and still pending, joined with campaign settings and user profile
     const [jobs] = await db.query(`
       SELECT q.*, c.device_mode, c.spintax, c.verify_numbers, c.replied_only, c.window_24h, 
              c.uniqueness, c.batch_pause_msgs, c.batch_pause_wait, c.fail_limit,
-             c.start_time, c.end_time, 
-             s.session_name as whatsapp_name,
-             a.device_name as android_name,
-             g.name as gateway_name
+             c.start_time, c.end_time,
+             p.plan, p.plan_expires_at
       FROM message_queue q
       JOIN campaigns c ON q.campaign_id = c.id
-      LEFT JOIN whatsapp_sessions s ON q.session_id = s.id
-      LEFT JOIN android_devices a ON q.session_id = a.id
-      LEFT JOIN sms_gateways g ON q.session_id = g.id
+      JOIN profiles p ON q.user_id = p.id
       WHERE q.status = 'pending' AND q.scheduled_at <= NOW()
       ORDER BY q.scheduled_at ASC
       LIMIT 10
@@ -48,13 +44,55 @@ async function processQueue(): Promise<void> {
       const campaignId = job.campaign_id;
       const userId = job.user_id;
       processedCampaignIds.add(campaignId);
+
+      // Check Plan Expiration / Validity
+      const plan = job.plan ? job.plan.toLowerCase() : '';
+      const isUnlimited = plan === 'admin' || !job.plan_expires_at;
+      if (!isUnlimited) {
+        const expiry = new Date(job.plan_expires_at);
+        if (expiry.getTime() < Date.now()) {
+          console.log(`[Queue] ⚠️ Skipping job ${job.id}: User account is expired.`);
+          await db.query('UPDATE message_queue SET status = ?, error_message = ? WHERE id = ?', ['failed', 'Subscription expired. Please renew your plan.', job.id]);
+          await db.query('UPDATE campaigns SET total_failed = total_failed + 1 WHERE id = ?', [campaignId]);
+          continue;
+        }
+      }
       
-      const isWhatsapp = !!job.whatsapp_name;
-      const isAndroid = !!job.android_name;
-      const isGateway = !!job.gateway_name;
-      
-      const deviceType = isWhatsapp ? 'whatsapp' : (isAndroid ? 'android' : (isGateway ? 'sms_gateway' : 'unknown'));
-      const sessionName = job.whatsapp_name || job.android_name || job.gateway_name || 'default';
+      let deviceType = 'unknown';
+      let sessionName = 'default';
+
+      // 1. Try WhatsApp
+      try {
+        const [wsRows]: any = await db.query('SELECT session_name FROM whatsapp_sessions WHERE id = ?', [job.session_id]);
+        if (wsRows && wsRows.length > 0) {
+          sessionName = wsRows[0].session_name;
+          deviceType = 'whatsapp';
+        }
+      } catch (err: any) {
+        console.warn(`[Queue] Failed to query whatsapp_sessions for job ${job.id}:`, err.message);
+      }
+
+      // 2. Try Android Device
+      if (deviceType === 'unknown') {
+        try {
+          const [adRows]: any = await db.query('SELECT device_name FROM android_devices WHERE id = ?', [job.session_id]);
+          if (adRows && adRows.length > 0) {
+            sessionName = adRows[0].device_name;
+            deviceType = 'android';
+          }
+        } catch (err: any) {}
+      }
+
+      // 3. Try SMS Gateway
+      if (deviceType === 'unknown') {
+        try {
+          const [sgRows]: any = await db.query('SELECT name FROM sms_gateways WHERE id = ?', [job.session_id]);
+          if (sgRows && sgRows.length > 0) {
+            sessionName = sgRows[0].name;
+            deviceType = 'sms_gateway';
+          }
+        } catch (err: any) {}
+      }
 
       // 1. Check Campaign Time Window (start_time / end_time)
       if (job.start_time || job.end_time) {

@@ -51,6 +51,105 @@ const pool = mysql.createPool({
       console.warn("[DB] Failed to create media table:", e.message);
     }
 
+    // Create sms_gateways table if not exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS sms_gateways (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            provider VARCHAR(100) NOT NULL,
+            config JSON NOT NULL,
+            is_default BOOLEAN DEFAULT FALSE,
+            status VARCHAR(50) DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("[DB] Checked/Created 'sms_gateways' table");
+    } catch (e: any) {
+      console.warn("[DB] Failed to create sms_gateways table:", e.message);
+    }
+
+    // Create android_devices table if not exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS android_devices (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            device_name VARCHAR(255) DEFAULT 'WaCloud SMS Gateway',
+            connection_token VARCHAR(255) UNIQUE NOT NULL,
+            socket_id VARCHAR(255) NULL,
+            status VARCHAR(50) DEFAULT 'disconnected',
+            battery_level INT NULL,
+            default_sim INT DEFAULT 1,
+            sms_delay_seconds INT DEFAULT 0,
+            sync_mode VARCHAR(20) DEFAULT 'all',
+            last_active_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("[DB] Checked/Created 'android_devices' table");
+    } catch (e: any) {
+      console.warn("[DB] Failed to create android_devices table:", e.message);
+    }
+
+    // Create android_incoming_sms table if not exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS android_incoming_sms (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            device_id VARCHAR(36) NOT NULL,
+            sender_number VARCHAR(50) NOT NULL,
+            message_content TEXT NOT NULL,
+            received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("[DB] Checked/Created 'android_incoming_sms' table");
+    } catch (e: any) {
+      console.warn("[DB] Failed to create android_incoming_sms table:", e.message);
+    }
+    // Create transactional_logs table if not exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS transactional_logs (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            recipient VARCHAR(50) NOT NULL,
+            content TEXT NOT NULL,
+            wa_message_id VARCHAR(255),
+            sms_message_id VARCHAR(255),
+            method VARCHAR(50) NOT NULL,
+            status VARCHAR(50) DEFAULT 'delivered',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log("[DB] Checked/Created 'transactional_logs' table");
+    } catch (e: any) {
+      console.warn("[DB] Failed to create transactional_logs table:", e.message);
+    }
+
+    // Add Performance Indexes
+    const indexes = [
+      { table: 'whatsapp_sessions', name: 'idx_user_id', cols: 'user_id' },
+      { table: 'message_queue', name: 'idx_status_scheduled', cols: 'status, scheduled_at' },
+      { table: 'message_queue', name: 'idx_campaign_id', cols: 'campaign_id' },
+      { table: 'message_logs', name: 'idx_user_status_sent', cols: 'user_id, status, sent_at' },
+      { table: 'campaigns', name: 'idx_user_id', cols: 'user_id' },
+      { table: 'contacts', name: 'idx_group_id', cols: 'group_id' }
+    ];
+
+    for (const idx of indexes) {
+      try {
+        await connection.query(`CREATE INDEX ${idx.name} ON ${idx.table} (${idx.cols})`);
+        console.log(`[DB] Created index ${idx.name} on ${idx.table}`);
+      } catch (e: any) {
+        if (e.code !== 'ER_DUP_KEYNAME') console.warn(`[DB] Failed to create index ${idx.name}:`, e.message);
+      }
+    }
+
     connection.release();
   } catch (err) {
     console.error("[DB] Migration check failed:", err);

@@ -32,6 +32,21 @@ export class SmsManager {
      * Send SMS using the configured provider
      */
     async sendSms(to: string | string[], message: string): Promise<SmsResponse[]> {
+        if (this.userId) {
+            const [profileRows]: any = await db.query('SELECT plan, plan_expires_at FROM profiles WHERE id = ?', [this.userId]);
+            const profile = profileRows[0];
+            if (profile) {
+                const plan = profile.plan ? profile.plan.toLowerCase() : '';
+                const isUnlimited = plan === 'admin' || !profile.plan_expires_at;
+                if (!isUnlimited) {
+                    const expiry = new Date(profile.plan_expires_at);
+                    if (expiry.getTime() < Date.now()) {
+                        throw new Error('Your subscription has expired. Please renew your plan.');
+                    }
+                }
+            }
+        }
+
         const recipientString = Array.isArray(to) ? to.join(',') : to;
 
         switch (this.provider) {

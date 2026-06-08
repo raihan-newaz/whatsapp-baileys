@@ -62,7 +62,7 @@ export default function AndroidDevicesPage() {
       if (res.success) {
         let baseUrl = window.location.origin;
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-           baseUrl = `http://192.168.10.104:${window.location.port || 3000}`;
+           baseUrl = `http://192.168.0.104:${window.location.port || 3000}`;
         }
         // Construct the QR Payload (JSON containing backend URL and Token)
         const payload = JSON.stringify({
@@ -111,7 +111,7 @@ export default function AndroidDevicesPage() {
       if (res.success) {
         let baseUrl = window.location.origin;
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-           baseUrl = `http://192.168.10.104:${window.location.port || 3000}`;
+           baseUrl = `http://192.168.0.104:${window.location.port || 3000}`;
         }
         const payload = JSON.stringify({
            url: baseUrl,

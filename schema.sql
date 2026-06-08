@@ -340,3 +340,16 @@ CREATE TABLE IF NOT EXISTS android_incoming_sms (
     message_content TEXT NOT NULL,
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 19. Transactional Logs Table
+CREATE TABLE IF NOT EXISTS transactional_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    recipient VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    wa_message_id VARCHAR(255),
+    sms_message_id VARCHAR(255),
+    method VARCHAR(50) NOT NULL,
+    status VARCHAR(50) DEFAULT 'delivered',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
