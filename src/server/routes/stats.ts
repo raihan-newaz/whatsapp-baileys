@@ -71,11 +71,12 @@ router.get('/', async (req: Request, res: Response) => {
 
     // 6. Plan limits from system_settings
     let planLimits: any = {};
+    const planKey = (profile.plan || 'free_trial').toLowerCase();
     try {
       const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
       const raw = (settingsRows as any[])[0]?.value;
       const limitsAll = raw ? JSON.parse(raw) : {};
-      planLimits = limitsAll[profile.plan] || limitsAll['free_trial'] || {};
+      planLimits = limitsAll[planKey] || limitsAll['free_trial'] || {};
     } catch (e) {}
 
     const totalDeviceConnections = waCount + androidCount + apiCount;
@@ -87,15 +88,25 @@ router.get('/', async (req: Request, res: Response) => {
       sentToday,
       failedToday,
       queuePending,
-      plan_expires_at: profile.plan_expires_at,
+      plan_expires_at: planKey === 'admin' ? null : profile.plan_expires_at,
       usage: {
-        deviceConnections: { current: totalDeviceConnections, limit: planLimits.accounts ?? 1 },
-        messagesMonthly: { current: sentMonth, limit: planLimits.monthly_msgs ?? (planLimits.daily_msgs ? planLimits.daily_msgs * 30 : 60000) },
-        contacts: { current: totalContacts, limit: planLimits.max_contacts ?? 25000 },
-        numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: planLimits.number_checks_limit ?? 3000 },
-        apiRequests: { current: profile.api_requests_count || 0, limit: planLimits.api_requests_limit ?? 30000 },
+        deviceConnections: { current: totalDeviceConnections, limit: planLimits.accounts ?? 0 },
+        messagesMonthly: { 
+          current: sentMonth, 
+          limit: planLimits.monthly_msgs !== undefined 
+            ? planLimits.monthly_msgs 
+            : (planLimits.daily_msgs !== undefined 
+                ? (planLimits.daily_msgs === 0 ? 0 : planLimits.daily_msgs * 30) 
+                : 60000) 
+        },
+        contacts: { current: totalContacts, limit: planLimits.max_contacts ?? 0 },
+        numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: planLimits.number_checks_limit ?? 0 },
+        apiRequests: { current: profile.api_requests_count || 0, limit: planLimits.api_requests_limit ?? 0 },
         additionalUsers: { current: subUsers, limit: planLimits.additional_users_limit ?? 0 },
-        mediaStorage: { current: mediaTotalSize, limit: planLimits.media_limit ?? 104857600 }
+        mediaStorage: { 
+          current: mediaTotalSize, 
+          limit: planLimits.media_limit === 0 ? 0 : (planLimits.media_limit ? planLimits.media_limit * 1024 * 1024 : 104857600) 
+        }
       }
     });
   } catch (err: any) {

@@ -324,11 +324,15 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3">
               <div className="w-2 h-6 bg-primary rounded-full" /> Usage & Limits
             </div>
-            {stats.plan_expires_at && (
+            {userPlan?.toLowerCase() === 'admin' ? (
+               <span className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
+                {formatPlanName(userPlan)} - Lifetime Plan (Never Expires)
+              </span>
+            ) : stats.plan_expires_at ? (
                <span className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
                 {formatPlanName(userPlan)} - Plan Expires: {new Date(stats.plan_expires_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
-            )}
+            ) : null}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
