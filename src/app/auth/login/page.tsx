@@ -52,8 +52,8 @@ export default function LoginPage() {
 
         {/* Brand Header */}
         <Link href="/" className="flex items-center gap-3 z-10">
-          <div className="w-12 h-12 rounded-2xl bg-black flex items-center justify-center shadow-2xl">
-            <MessageCircle className="w-7 h-7 text-emerald-500" fill="currentColor" />
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 overflow-hidden flex items-center justify-center shadow-2xl">
+            <img src="/logo.png" alt="WaCloud Logo" className="w-8 h-8 object-contain" />
           </div>
           <span className="font-extrabold text-2xl tracking-tighter text-black">
             wacloud<span className="text-white opacity-90">.app</span>
@@ -99,8 +99,8 @@ export default function LoginPage() {
           {/* Header */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2.5 md:hidden mb-6">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg">
-                <MessageCircle className="w-6 h-6 text-black" fill="black" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 overflow-hidden flex items-center justify-center shadow-lg">
+                <img src="/logo.png" alt="WaCloud Logo" className="w-6 h-6 object-contain" />
               </div>
               <span className="font-extrabold text-xl tracking-tighter text-white">wacloud.app</span>
             </div>

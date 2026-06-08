@@ -44,8 +44,8 @@ export default function LandingPage() {
       }`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-transform duration-300 group-hover:scale-105">
-              <MessageCircle className="w-6 h-6 text-black" fill="black" />
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 overflow-hidden flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-transform duration-300 group-hover:scale-105">
+              <img src="/logo.png" alt="WaCloud Logo" className="w-7 h-7 object-contain" />
             </div>
             <span className="font-bold text-2xl tracking-tighter text-white group-hover:text-emerald-400 transition-colors">
               wacloud<span className="text-emerald-400">.app</span>
@@ -320,8 +320,8 @@ export default function LandingPage() {
           {/* visual connector */}
           <div className="relative border border-zinc-800 bg-zinc-900/10 rounded-3xl p-8 aspect-square max-w-md mx-auto flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-radial-gradient from-emerald-500/5 to-transparent pointer-events-none" />
-            <div className="w-24 h-24 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)] z-10">
-              <MessageCircle className="w-12 h-12 text-black" fill="black" />
+            <div className="w-24 h-24 rounded-3xl bg-emerald-500/10 overflow-hidden flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.3)] z-10">
+              <img src="/logo.png" alt="WaCloud Logo" className="w-16 h-16 object-contain" />
             </div>
             
             {/* outer rings */}
@@ -604,8 +604,8 @@ export default function LandingPage() {
           {/* Col 1 */}
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-lg">
-                <MessageCircle className="w-5 h-5 text-black" fill="black" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 overflow-hidden flex items-center justify-center shadow-lg">
+                <img src="/logo.png" alt="WaCloud Logo" className="w-5.5 h-5.5 object-contain" />
               </div>
               <span className="font-bold text-xl tracking-tighter text-white">wacloud<span className="text-emerald-400">.app</span></span>
             </Link>

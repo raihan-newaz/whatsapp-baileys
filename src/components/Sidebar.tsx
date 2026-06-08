@@ -97,8 +97,8 @@ export function Sidebar({ collapsed, setCollapsed, role }: SidebarProps) {
     <aside className={`${collapsed ? 'w-20' : 'w-64'} flex flex-col bg-card border-r border-border text-card-foreground transition-all duration-300 flex-shrink-0 z-20 shadow-xl overflow-hidden`}>
       {/* Logo Area */}
       <div className="flex items-center gap-2 px-6 py-3 border-b border-border">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center flex-shrink-0 shadow-lg">
-          <MessageCircle className="w-6 h-6 text-primary-foreground" fill="currentColor" />
+        <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 shadow-lg bg-emerald-500/10">
+          <img src="/logo.png" alt="WaCloud Logo" className="w-7 h-7 object-contain" />
         </div>
         {!collapsed && (
           <span className="font-semibold text-foreground text-2xl tracking-tighter">wacloud</span>
