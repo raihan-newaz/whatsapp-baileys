@@ -376,8 +376,8 @@ export default function InboxPage() {
 
   const filteredChats = chats
     .filter(c => 
-      c.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      c.wid?.includes(searchQuery)
+      (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (c.wid || '').includes(searchQuery)
     )
     .sort((a, b) => {
       const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;

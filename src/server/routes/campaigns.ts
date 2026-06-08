@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import db, { generateUUID } from '../lib/db';
-import { getPlanLimits, checkEmergencyStatus, checkWordFilter, calculateWarmupLimit, getSystemSetting } from '../lib/safetyManager';
+import { getPlanLimits, checkEmergencyStatus, checkWordFilter, calculateWarmupLimit, getSystemSetting, calculateAgeBasedLimit } from '../lib/safetyManager';
 import { prepareMessage } from '../lib/campaignHelper';
 
 const router = Router();
@@ -92,8 +92,50 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
+    // 1. Fetch Session Data Early
+    let sessionData: any = null;
+    try {
+      const [wsRows] = await db.query('SELECT created_at, device_info FROM whatsapp_sessions WHERE id = ?', [sessionId]);
+      if (wsRows && (wsRows as any[])[0]) {
+        sessionData = (wsRows as any[])[0];
+      }
+    } catch (e: any) {
+      console.warn('[Campaigns] Failed to query whatsapp_sessions:', e.message);
+    }
+
+    if (!sessionData) {
+      try {
+        const [adRows] = await db.query('SELECT created_at FROM android_devices WHERE id = ?', [sessionId]);
+        if (adRows && (adRows as any[])[0]) {
+          sessionData = (adRows as any[])[0];
+        }
+      } catch (e: any) {}
+    }
+
+    if (!sessionData) {
+      try {
+        const [sgRows] = await db.query('SELECT created_at FROM sms_gateways WHERE id = ?', [sessionId]);
+        if (sgRows && (sgRows as any[])[0]) {
+          sessionData = (sgRows as any[])[0];
+        }
+      } catch (e: any) {}
+    }
+
+    if (!sessionData) return res.status(400).json({ error: 'Device session not found' });
+
+    // 2. Load Plan limits and apply custom device limit override
     const limits = await getPlanLimits(plan, role);
     let maxDailyLimit = limits.daily_msgs;
+
+    const devInfo = sessionData.device_info 
+      ? (typeof sessionData.device_info === 'string' ? JSON.parse(sessionData.device_info) : sessionData.device_info)
+      : null;
+    const customLimit = devInfo?.dailyLimit ? Number(devInfo.dailyLimit) : null;
+    if (customLimit !== null && !isNaN(customLimit) && customLimit > 0) {
+      maxDailyLimit = customLimit;
+    } else if (devInfo?.openedDate) {
+      maxDailyLimit = calculateAgeBasedLimit(devInfo.openedDate);
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -161,44 +203,7 @@ router.post('/', async (req: Request, res: Response) => {
     const [contactRows] = await db.query('SELECT * FROM contacts WHERE user_id = ? AND group_id = ?', [userId, group_id]);
     const contacts = contactRows as any[];
 
-    let sessionData: any = null;
-    
-    // 1. Try WhatsApp Session
-    try {
-      const [wsRows] = await db.query('SELECT created_at FROM whatsapp_sessions WHERE id = ?', [sessionId]);
-      if (wsRows && (wsRows as any[])[0]) {
-        sessionData = (wsRows as any[])[0];
-      }
-    } catch (e: any) {
-      console.warn('[Campaigns] Failed to query whatsapp_sessions:', e.message);
-    }
-
-    // 2. Try Android Device (only if not found in WhatsApp)
-    if (!sessionData) {
-      try {
-        const [adRows] = await db.query('SELECT created_at FROM android_devices WHERE id = ?', [sessionId]);
-        if (adRows && (adRows as any[])[0]) {
-          sessionData = (adRows as any[])[0];
-        }
-      } catch (e: any) {
-        // Ignore table missing / query errors gracefully
-      }
-    }
-
-    // 3. Try SMS Gateway (only if not found in WhatsApp or Android)
-    if (!sessionData) {
-      try {
-        const [sgRows] = await db.query('SELECT created_at FROM sms_gateways WHERE id = ?', [sessionId]);
-        if (sgRows && (sgRows as any[])[0]) {
-          sessionData = (sgRows as any[])[0];
-        }
-      } catch (e: any) {
-        // Ignore table missing / query errors gracefully
-      }
-    }
-    
     if (!contacts) return res.status(400).json({ error: 'Contacts not found' });
-    if (!sessionData) return res.status(400).json({ error: 'Device session not found' });
     if (!templateContent) return res.status(400).json({ error: 'Campaign content is missing' });
 
     // If in compose mode and media was provided in body, use it
@@ -210,9 +215,10 @@ router.post('/', async (req: Request, res: Response) => {
     // 1. Check for bad words in template
     await checkWordFilter(templateContent);
     
-    // 2. Adjust daily limit for Account Warmup Mode if it's a new account
+    // 2. Adjust daily limit for Account Warmup Mode if enabled
     if (role !== 'admin' && plan !== 'enterprise') {
-      maxDailyLimit = await calculateWarmupLimit(sessionData.created_at, maxDailyLimit);
+      const warmupEnabled = !!devInfo?.warmupMode;
+      maxDailyLimit = await calculateWarmupLimit(sessionData.created_at, maxDailyLimit, warmupEnabled);
     }
 
     // Recalculate effective daily limit based on warmup restrictions

@@ -191,7 +191,43 @@ router.post('/send', async (req: Request, res: Response) => {
     const plan = profile?.plan || 'free';
     const role = profile?.role || 'user';
     const limits = await getPlanLimits(plan, role);
-    const dailyLimit = limits.daily_msgs;
+    let dailyLimit = limits.daily_msgs;
+
+    // Fetch the whatsapp session for custom overrides & warmup limits
+    let sessionData: any = null;
+    try {
+      const [wsRows] = await db.query(
+        'SELECT created_at, device_info FROM whatsapp_sessions WHERE user_id = ? AND session_name = ?',
+        [userId, sessionName]
+      );
+      if (wsRows && (wsRows as any[])[0]) {
+        sessionData = (wsRows as any[])[0];
+      }
+    } catch (e: any) {
+      console.warn('[WhatsApp Route] Failed to query whatsapp_sessions:', e.message);
+    }
+
+    if (sessionData) {
+      const devInfo = sessionData.device_info 
+        ? (typeof sessionData.device_info === 'string' ? JSON.parse(sessionData.device_info) : sessionData.device_info)
+        : null;
+      const customLimit = devInfo?.dailyLimit ? Number(devInfo.dailyLimit) : null;
+      if (customLimit !== null && !isNaN(customLimit) && customLimit > 0) {
+        dailyLimit = customLimit;
+      } else if (devInfo?.openedDate) {
+        const { calculateAgeBasedLimit } = require('../lib/safetyManager');
+        dailyLimit = calculateAgeBasedLimit(devInfo.openedDate);
+      }
+      
+      // Warm-up Mode check
+      if (role !== 'admin' && plan !== 'enterprise') {
+        const warmupEnabled = !!devInfo?.warmupMode;
+        if (warmupEnabled) {
+          const { calculateWarmupLimit } = require('../lib/safetyManager');
+          dailyLimit = await calculateWarmupLimit(sessionData.created_at, dailyLimit, warmupEnabled);
+        }
+      }
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -346,7 +382,43 @@ router.post('/groups/send', async (req: Request, res: Response) => {
     const plan = profile?.plan || 'free';
     const role = profile?.role || 'user';
     const limits = await getPlanLimits(plan, role);
-    const dailyLimit = limits.daily_msgs;
+    let dailyLimit = limits.daily_msgs;
+
+    // Fetch the whatsapp session for custom overrides & warmup limits
+    let sessionData: any = null;
+    try {
+      const [wsRows] = await db.query(
+        'SELECT created_at, device_info FROM whatsapp_sessions WHERE user_id = ? AND session_name = ?',
+        [userId, sessionName]
+      );
+      if (wsRows && (wsRows as any[])[0]) {
+        sessionData = (wsRows as any[])[0];
+      }
+    } catch (e: any) {
+      console.warn('[WhatsApp Route] Failed to query whatsapp_sessions:', e.message);
+    }
+
+    if (sessionData) {
+      const devInfo = sessionData.device_info 
+        ? (typeof sessionData.device_info === 'string' ? JSON.parse(sessionData.device_info) : sessionData.device_info)
+        : null;
+      const customLimit = devInfo?.dailyLimit ? Number(devInfo.dailyLimit) : null;
+      if (customLimit !== null && !isNaN(customLimit) && customLimit > 0) {
+        dailyLimit = customLimit;
+      } else if (devInfo?.openedDate) {
+        const { calculateAgeBasedLimit } = require('../lib/safetyManager');
+        dailyLimit = calculateAgeBasedLimit(devInfo.openedDate);
+      }
+      
+      // Warm-up Mode check
+      if (role !== 'admin' && plan !== 'enterprise') {
+        const warmupEnabled = !!devInfo?.warmupMode;
+        if (warmupEnabled) {
+          const { calculateWarmupLimit } = require('../lib/safetyManager');
+          dailyLimit = await calculateWarmupLimit(sessionData.created_at, dailyLimit, warmupEnabled);
+        }
+      }
+    }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

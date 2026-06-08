@@ -67,20 +67,62 @@ export async function getPlanLimits(plan: string = 'free_trial', role: string = 
   return limits['free_trial'] || limits['free'] || { accounts: 1, daily_msgs: 100, group_extractions: 1, max_contacts: 500 };
 }
 
-// 4. Calculate Warmup Limit based on session age
-export async function calculateWarmupLimit(sessionCreatedAt: string, maxPlanLimit: number) {
-  const warmupRules = await getSystemSetting('warmup_rules', { day1: 20, day2: 50, day3: 100, day4: 200 });
+// 4. Calculate Age-based safe limit
+export function calculateAgeBasedLimit(openedDateStr: string): number {
+  if (!openedDateStr) return 800;
+  try {
+    const openedDate = new Date(openedDateStr);
+    if (isNaN(openedDate.getTime())) return 800;
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - openedDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 30) return 200;
+    if (diffDays <= 90) return 500;
+    return 800;
+  } catch {
+    return 800;
+  }
+}
+
+// 5. Calculate Warmup Limit based on session age
+export async function calculateWarmupLimit(sessionCreatedAt: string, maxPlanLimit: number, warmupEnabled?: boolean) {
+  if (warmupEnabled === false) {
+    return maxPlanLimit;
+  }
   
   const created = new Date(sessionCreatedAt);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - created.getTime());
   const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
   
-  let warmupLimit = maxPlanLimit;
-  if (diffDays === 1) warmupLimit = warmupRules.day1;
-  else if (diffDays === 2) warmupLimit = warmupRules.day2;
-  else if (diffDays === 3) warmupLimit = warmupRules.day3;
-  else if (diffDays === 4) warmupLimit = warmupRules.day4;
+  if (diffDays > 14) {
+    return maxPlanLimit;
+  }
+
+  const warmupRules = await getSystemSetting('warmup_rules', { 
+    day1: 10, 
+    day2: 20, 
+    day3: 50, 
+    day4: 100,
+    day5: 150,
+    day6: 200,
+    day7: 250,
+    day8: 300,
+    day9: 350,
+    day10: 400,
+    day11: 450,
+    day12: 500,
+    day13: 600,
+    day14: 700
+  });
+
+  const ruleKey = `day${diffDays}`;
+  let warmupLimit = (warmupRules as any)[ruleKey];
+  
+  if (warmupLimit === undefined) {
+    warmupLimit = Math.round(10 + ((diffDays - 1) / 13) * 690);
+  }
   
   // Return whichever is stricter (smaller), but only if maxPlanLimit is not 0 (Unlimited)
   if (maxPlanLimit === 0) return warmupLimit;

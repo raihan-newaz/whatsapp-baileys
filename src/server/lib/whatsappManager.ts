@@ -258,6 +258,57 @@ export async function restoreSessions() {
   }
 }
 
+async function shouldSyncContacts(userId: string, sessionName: string): Promise<boolean> {
+  try {
+    const [rows] = await db.query(
+      'SELECT device_info FROM whatsapp_sessions WHERE user_id = ? AND session_name = ?',
+      [userId, sessionName]
+    );
+    const row = (rows as any[])[0];
+    if (!row || !row.device_info) return false;
+    
+    let info = row.device_info;
+    if (typeof info === 'string') {
+      try { info = JSON.parse(info); } catch (e) { return false; }
+    }
+    return !!info?.syncContacts;
+  } catch (err) {
+    console.error('[WhatsApp Sync] Failed to check syncContacts setting:', err);
+    return false;
+  }
+}
+
+async function syncContactsToDb(userId: string, sessionName: string, contactsList: any[]) {
+  const isEnabled = await shouldSyncContacts(userId, sessionName);
+  if (!isEnabled) return;
+  
+  if (!contactsList || contactsList.length === 0) return;
+  
+  console.log(`[WhatsApp Sync] Syncing ${contactsList.length} contacts for user ${userId}...`);
+  
+  for (const c of contactsList) {
+    const jid = c.id;
+    if (!jid || jid.endsWith('@g.us') || jid === 'status@broadcast') continue;
+    
+    const phone = jid.split('@')[0].replace(/[^0-9]/g, '');
+    if (!phone) continue;
+    
+    const name = c.name || c.verifiedName || c.notify || phone;
+    
+    try {
+      const id = generateUUID();
+      await db.query(
+        `INSERT INTO contacts (id, user_id, name, phone, tags) 
+         VALUES (?, ?, ?, ?, ?) 
+         ON DUPLICATE KEY UPDATE name = IF(name IS NULL OR name = '' OR name = ? OR name = 'Unknown', VALUES(name), name)`,
+        [id, userId, name, phone, JSON.stringify(['whatsapp']), phone]
+      );
+    } catch (err) {
+      console.warn(`[WhatsApp Sync] Failed to sync contact ${jid}:`, err);
+    }
+  }
+}
+
 export async function createWhatsAppSession(
   userId: string,
   sessionId: string,
@@ -299,7 +350,9 @@ export async function createWhatsAppSession(
     browser: Browsers.macOS('Desktop'),
     defaultQueryTimeoutMs: 60000,
     connectTimeoutMs: 60000,
-    keepAliveIntervalMs: 25000
+    keepAliveIntervalMs: 25000,
+    syncFullHistory: true,
+    shouldSyncHistoryMessage: () => true
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -461,9 +514,26 @@ export async function createWhatsAppSession(
     }
   });
 
+  sock.ev.on('contacts.upsert', async (contacts) => {
+    syncContactsToDb(userId, sessionName, contacts).catch(err => {
+      console.error('[WhatsApp Sync] Failed to sync contacts on upsert:', err);
+    });
+  });
+
+  sock.ev.on('contacts.update', async (updates) => {
+    syncContactsToDb(userId, sessionName, updates).catch(err => {
+      console.error('[WhatsApp Sync] Failed to sync contacts on update:', err);
+    });
+  });
+
   sock.ev.on('messaging-history.set', async ({ chats, contacts, messages, isLatest }) => {
-    console.log(`[WhatsApp] Syncing history for ${key}: ${messages.length} messages, ${chats.length} chats`);
+    console.log(`[WhatsApp] Syncing history for ${key}: ${messages.length} messages, ${chats.length} chats, ${contacts?.length || 0} contacts`);
     try {
+      if (contacts && contacts.length > 0) {
+        syncContactsToDb(userId, sessionName, contacts).catch(err => {
+          console.error('[WhatsApp Sync] Failed to sync contacts from history:', err);
+        });
+      }
       // 1. First sync all chats from the chats list
       for (const chat of chats) {
         const jid = chat.id;
