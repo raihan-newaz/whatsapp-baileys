@@ -84,8 +84,8 @@ router.post('/', async (req: Request, res: Response) => {
     const role = profile?.role || 'user';
 
     // Check Plan Expiration
-    const isUnlimited = plan.toLowerCase() === 'admin' || !profile?.plan_expires_at;
-    if (!isUnlimited) {
+    const isPlanUnlimited = plan.toLowerCase() === 'admin' || !profile?.plan_expires_at;
+    if (!isPlanUnlimited) {
       const expiry = new Date(profile.plan_expires_at);
       if (expiry.getTime() < Date.now()) {
         return res.status(402).json({ error: 'Your subscription has expired. Please renew your plan.' });
