@@ -338,12 +338,16 @@ export async function createWhatsAppSession(
       const me = sock.user;
       const phone = me?.id.split(':')[0] || '';
 
-      // Merge and save device info
       let currentDeviceInfo = {};
       try {
         const [rows]: any = await db.query('SELECT device_info FROM whatsapp_sessions WHERE id = ?', [sessionId]);
         if (rows.length > 0 && rows[0].device_info) {
-          currentDeviceInfo = JSON.parse(rows[0].device_info);
+          const rawInfo = rows[0].device_info;
+          if (typeof rawInfo === 'string') {
+            currentDeviceInfo = JSON.parse(rawInfo);
+          } else if (typeof rawInfo === 'object') {
+            currentDeviceInfo = rawInfo;
+          }
         }
       } catch (e) {}
 

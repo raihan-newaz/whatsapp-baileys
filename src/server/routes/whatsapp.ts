@@ -428,7 +428,15 @@ router.patch('/sessions/:id/settings', async (req, res) => {
     }
 
     // 2. Merge and Update
-    const currentInfo = JSON.parse((existing as any[])[0].device_info || '{}');
+    const rawInfo = (existing as any[])[0].device_info;
+    let currentInfo = {};
+    if (rawInfo) {
+      if (typeof rawInfo === 'string') {
+        try { currentInfo = JSON.parse(rawInfo); } catch (e) {}
+      } else if (typeof rawInfo === 'object') {
+        currentInfo = rawInfo;
+      }
+    }
     const updatedInfo = { ...currentInfo, ...settings };
 
     await db.query(
