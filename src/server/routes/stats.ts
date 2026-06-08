@@ -71,13 +71,28 @@ router.get('/', async (req: Request, res: Response) => {
 
     // 6. Plan limits from system_settings
     let planLimits: any = {};
-    const planKey = (profile.plan || 'free_trial').toLowerCase();
+    const planKey = (profile.plan || 'free_trial').toLowerCase().replace(/\s+/g, '_');
     try {
       const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
       const raw = (settingsRows as any[])[0]?.value;
       const limitsAll = raw ? JSON.parse(raw) : {};
-      planLimits = limitsAll[planKey] || limitsAll['free_trial'] || {};
-    } catch (e) {}
+      planLimits = limitsAll[planKey] || limitsAll[profile.plan] || limitsAll['free_trial'] || {};
+    } catch (e) {
+      console.error('Error fetching billing limits in stats:', e);
+    }
+
+    const defaultLimits: any = {
+      free_trial: { accounts: 1, daily_msgs: 2000, max_contacts: 25000, media_limit: 100, number_checks_limit: 100, api_requests_limit: 1000, additional_users_limit: 0 },
+      pro: { accounts: 5, daily_msgs: 5000, max_contacts: 50000, media_limit: 500, number_checks_limit: 1000, api_requests_limit: 10000, additional_users_limit: 3 },
+      business: { accounts: 12, daily_msgs: 16666, max_contacts: 100000, media_limit: 1024, number_checks_limit: 5000, api_requests_limit: 50000, additional_users_limit: 5 },
+      enterprise: { accounts: 20, daily_msgs: 50000, max_contacts: 250000, media_limit: 5120, number_checks_limit: 20000, api_requests_limit: 200000, additional_users_limit: 10 },
+      admin: { accounts: 0, daily_msgs: 0, max_contacts: 0, media_limit: 0, number_checks_limit: 0, api_requests_limit: 0, additional_users_limit: 0 }
+    };
+
+    const activeLimits = {
+      ...(defaultLimits[planKey] || defaultLimits[profile.plan?.toLowerCase()] || defaultLimits['free_trial']),
+      ...planLimits
+    };
 
     const totalDeviceConnections = waCount + androidCount + apiCount;
 
@@ -90,22 +105,22 @@ router.get('/', async (req: Request, res: Response) => {
       queuePending,
       plan_expires_at: planKey === 'admin' ? null : profile.plan_expires_at,
       usage: {
-        deviceConnections: { current: totalDeviceConnections, limit: planLimits.accounts ?? 0 },
+        deviceConnections: { current: totalDeviceConnections, limit: activeLimits.accounts ?? 0 },
         messagesMonthly: { 
           current: sentMonth, 
-          limit: planLimits.monthly_msgs !== undefined 
-            ? planLimits.monthly_msgs 
-            : (planLimits.daily_msgs !== undefined 
-                ? (planLimits.daily_msgs === 0 ? 0 : planLimits.daily_msgs * 30) 
+          limit: activeLimits.monthly_msgs !== undefined 
+            ? activeLimits.monthly_msgs 
+            : (activeLimits.daily_msgs !== undefined 
+                ? (activeLimits.daily_msgs === 0 ? 0 : activeLimits.daily_msgs * 30) 
                 : 60000) 
         },
-        contacts: { current: totalContacts, limit: planLimits.max_contacts ?? 0 },
-        numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: planLimits.number_checks_limit ?? 0 },
-        apiRequests: { current: profile.api_requests_count || 0, limit: planLimits.api_requests_limit ?? 0 },
-        additionalUsers: { current: subUsers, limit: planLimits.additional_users_limit ?? 0 },
+        contacts: { current: totalContacts, limit: activeLimits.max_contacts ?? 0 },
+        numberCheckerCredits: { current: profile.number_checker_credits || 0, limit: activeLimits.number_checks_limit ?? 0 },
+        apiRequests: { current: profile.api_requests_count || 0, limit: activeLimits.api_requests_limit ?? 0 },
+        additionalUsers: { current: subUsers, limit: activeLimits.additional_users_limit ?? 0 },
         mediaStorage: { 
           current: mediaTotalSize, 
-          limit: planLimits.media_limit === 0 ? 0 : (planLimits.media_limit ? planLimits.media_limit * 1024 * 1024 : 104857600) 
+          limit: activeLimits.media_limit === 0 ? 0 : (activeLimits.media_limit ? activeLimits.media_limit * 1024 * 1024 : 104857600) 
         }
       }
     });
