@@ -53,7 +53,8 @@ router.get('/:userId/stats', async (req: Request, res: Response) => {
     const userPlan = profile ? profile.plan : 'free';
 
     const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
-    const limitsAll = JSON.parse((settingsRows as any[])[0]?.value || '{}');
+    const rawVal = (settingsRows as any[])[0]?.value;
+    const limitsAll = typeof rawVal === 'string' ? JSON.parse(rawVal) : (rawVal || {});
     const planLimits = limitsAll[userPlan] || limitsAll['free_trial'] || {};
     
     // Calculate limit based on value and unit

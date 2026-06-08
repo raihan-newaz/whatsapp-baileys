@@ -320,14 +320,10 @@ export default function WhatsAppPage() {
     if (!editingSession || !user) return;
     setSavingSettings(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/whatsapp/sessions/${editingSession.id}/settings`, {
+      const updated = await apiFetch(`/api/whatsapp/sessions/${editingSession.id}/settings`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, settings: settingsData })
       });
-      if (!res.ok) throw new Error('Failed to save settings');
-      
-      const updated = await res.json();
       setSessions(prev => prev.map(s => s.id === editingSession.id ? { ...s, device_info: updated.device_info } : s));
       toast.success('Settings saved successfully');
       setShowSettingsModal(false);

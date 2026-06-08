@@ -36,7 +36,15 @@ CREATE TABLE IF NOT EXISTS whatsapp_sessions (
     status VARCHAR(50) DEFAULT 'disconnected',
     device_info JSON,
     last_active_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    proxy_url VARCHAR(255) DEFAULT NULL,
+    proxy_type VARCHAR(50) DEFAULT NULL,
+    ai_enabled TINYINT(1) DEFAULT 0,
+    ai_provider VARCHAR(50) DEFAULT 'google',
+    ai_api_key TEXT DEFAULT NULL,
+    ai_prompt TEXT DEFAULT NULL,
+    ai_model VARCHAR(100) DEFAULT 'gemini-2.5-flash-lite',
+    ai_reply_delay INT DEFAULT 0
 );
 
 -- 3. Contact Groups Table
@@ -200,6 +208,12 @@ CREATE TABLE IF NOT EXISTS webhooks (
     received_count INT DEFAULT 0,
     last_triggered_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    url TEXT DEFAULT NULL,
+    method VARCHAR(10) DEFAULT 'POST',
+    events LONGTEXT DEFAULT NULL,
+    headers TEXT DEFAULT NULL,
+    retry_count INT DEFAULT 3,
+    timeout INT DEFAULT 30,
     FOREIGN KEY (user_id) REFERENCES profiles(id),
     FOREIGN KEY (template_id) REFERENCES templates(id),
     FOREIGN KEY (session_id) REFERENCES whatsapp_sessions(id)
@@ -213,6 +227,17 @@ CREATE TABLE IF NOT EXISTS notifications (
     message TEXT NOT NULL,
     type VARCHAR(50) DEFAULT 'info',
     is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES profiles(id)
+);
+
+-- 13.5 Push Subscriptions Table
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    endpoint TEXT NOT NULL,
+    p256dh VARCHAR(255) NOT NULL,
+    auth VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES profiles(id)
 );

@@ -131,6 +131,68 @@ const pool = mysql.createPool({
       console.warn("[DB] Failed to create transactional_logs table:", e.message);
     }
 
+    // Create push_subscriptions table if not exists
+    try {
+      await connection.query(`
+        CREATE TABLE IF NOT EXISTS push_subscriptions (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL,
+            endpoint TEXT NOT NULL,
+            p256dh VARCHAR(255) NOT NULL,
+            auth VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES profiles(id)
+        )
+      `);
+      console.log("[DB] Checked/Created 'push_subscriptions' table");
+    } catch (e: any) {
+      console.warn("[DB] Failed to create push_subscriptions table:", e.message);
+    }
+
+    // Upgrade whatsapp_sessions table to add missing AI and proxy columns
+    const sessionColumns = [
+      { name: 'proxy_url', definition: 'VARCHAR(255) DEFAULT NULL' },
+      { name: 'proxy_type', definition: 'VARCHAR(50) DEFAULT NULL' },
+      { name: 'ai_enabled', definition: 'TINYINT(1) DEFAULT 0' },
+      { name: 'ai_provider', definition: 'VARCHAR(50) DEFAULT "google"' },
+      { name: 'ai_api_key', definition: 'TEXT DEFAULT NULL' },
+      { name: 'ai_prompt', definition: 'TEXT DEFAULT NULL' },
+      { name: 'ai_model', definition: 'VARCHAR(100) DEFAULT "gemini-2.5-flash-lite"' },
+      { name: 'ai_reply_delay', definition: 'INT DEFAULT 0' }
+    ];
+
+    for (const col of sessionColumns) {
+      try {
+        await connection.query(`ALTER TABLE whatsapp_sessions ADD COLUMN ${col.name} ${col.definition}`);
+        console.log(`[DB] Added column '${col.name}' to whatsapp_sessions`);
+      } catch (e: any) {
+        if (e.code !== 'ER_DUP_FIELDNAME') {
+          console.warn(`[DB] Failed to add column '${col.name}' to whatsapp_sessions:`, e.message);
+        }
+      }
+    }
+
+    // Upgrade webhooks table to add missing columns
+    const webhookColumns = [
+      { name: 'url', definition: 'TEXT DEFAULT NULL' },
+      { name: 'method', definition: 'VARCHAR(10) DEFAULT "POST"' },
+      { name: 'events', definition: 'LONGTEXT DEFAULT NULL' },
+      { name: 'headers', definition: 'TEXT DEFAULT NULL' },
+      { name: 'retry_count', definition: 'INT DEFAULT 3' },
+      { name: 'timeout', definition: 'INT DEFAULT 30' }
+    ];
+
+    for (const col of webhookColumns) {
+      try {
+        await connection.query(`ALTER TABLE webhooks ADD COLUMN ${col.name} ${col.definition}`);
+        console.log(`[DB] Added column '${col.name}' to webhooks`);
+      } catch (e: any) {
+        if (e.code !== 'ER_DUP_FIELDNAME') {
+          console.warn(`[DB] Failed to add column '${col.name}' to webhooks:`, e.message);
+        }
+      }
+    }
+
     // Add Performance Indexes
     const indexes = [
       { table: 'whatsapp_sessions', name: 'idx_user_id', cols: 'user_id' },

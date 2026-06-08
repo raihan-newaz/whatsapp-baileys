@@ -75,7 +75,7 @@ router.get('/', async (req: Request, res: Response) => {
     try {
       const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
       const raw = (settingsRows as any[])[0]?.value;
-      const limitsAll = raw ? JSON.parse(raw) : {};
+      const limitsAll = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
       planLimits = limitsAll[planKey] || limitsAll[profile.plan] || limitsAll['free_trial'] || {};
     } catch (e) {
       console.error('Error fetching billing limits in stats:', e);

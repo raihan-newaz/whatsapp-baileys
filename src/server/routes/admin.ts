@@ -176,7 +176,8 @@ router.patch('/users/:id', async (req: Request, res: Response) => {
       } else {
         try {
           const [settingsRows] = await db.query('SELECT value FROM system_settings WHERE `key` = "billing_limits"');
-          const limitsAll = JSON.parse((settingsRows as any[])[0]?.value || '{}');
+          const rawVal = (settingsRows as any[])[0]?.value;
+          const limitsAll = typeof rawVal === 'string' ? JSON.parse(rawVal) : (rawVal || {});
           const planLimits = limitsAll[plan] || {};
           const validityDays = planLimits.validity_days !== undefined ? Number(planLimits.validity_days) : (plan === 'free_trial' ? 3 : 30);
           if (validityDays === 0) {

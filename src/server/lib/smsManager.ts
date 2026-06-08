@@ -250,7 +250,7 @@ export class SmsManager {
                 const [oldRows] = await db.query('SELECT value FROM system_settings WHERE `key` = ?', ['greenweb_token']);
                 const oldRow = (oldRows as any[])[0];
                 if (oldRow) {
-                    const parsed = JSON.parse(oldRow.value);
+                    const parsed = typeof oldRow.value === 'string' ? JSON.parse(oldRow.value) : oldRow.value;
                     const token = typeof parsed === 'object' ? parsed.token : oldRow.value;
                     return new SmsManager('GreenWeb', { token });
                 }
